@@ -577,6 +577,13 @@ class _FormScreenState extends ConsumerState<FormScreen>
         _ => tier,
       };
 
+  // Shown persistently under the badge, not just in the one-time snackbar
+  static String? _qualityHint(String tier) => switch (tier) {
+        'gps_fair' => 'Usable, but retry if you can',
+        'coarse' => 'Likely WiFi/cell, not GPS - move to open sky and retry',
+        _ => null,
+      };
+
   /// Samples live GPS fixes for up to [_gpsSampleWindow], discarding stale
   /// and mocked fixes, keeping the best-accuracy fix seen, and stopping
   /// early once accuracy crosses the "good" threshold. On timeout, keeps
@@ -701,7 +708,7 @@ class _FormScreenState extends ConsumerState<FormScreen>
       if (tier == 'coarse' && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(
-              'GPS fix is coarse (±${position.accuracy.toStringAsFixed(0)}m) - consider moving to open sky and retrying')),
+              'GPS fix is coarse (±${position.accuracy.toStringAsFixed(0)}m) - ${_qualityHint(tier)}')),
         );
       }
     } catch (e) {
@@ -1216,20 +1223,35 @@ class _FormScreenState extends ConsumerState<FormScreen>
                     if (!isCapturing && hasFix && plot.accuracyM != null)
                       Padding(
                         padding: const EdgeInsets.only(top: 6),
-                        child: Chip(
-                          avatar: Icon(
-                            tier == 'gps_good'
-                                ? Icons.check_circle
-                                : (tier == 'gps_fair' ? Icons.info : Icons.warning),
-                            size: 18,
-                            color: tier == 'gps_good'
-                                ? Colors.green
-                                : (tier == 'gps_fair' ? Colors.orange : Colors.red),
-                          ),
-                          label: Text(
-                            '±${plot.accuracyM!.toStringAsFixed(0)} m · ${_qualityLabel(tier ?? '')}',
-                          ),
-                          visualDensity: VisualDensity.compact,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Chip(
+                              avatar: Icon(
+                                tier == 'gps_good'
+                                    ? Icons.check_circle
+                                    : (tier == 'gps_fair' ? Icons.info : Icons.warning),
+                                size: 18,
+                                color: tier == 'gps_good'
+                                    ? Colors.green
+                                    : (tier == 'gps_fair' ? Colors.orange : Colors.red),
+                              ),
+                              label: Text(
+                                '±${plot.accuracyM!.toStringAsFixed(0)} m · ${_qualityLabel(tier ?? '')}',
+                              ),
+                              visualDensity: VisualDensity.compact,
+                            ),
+                            if (_qualityHint(tier ?? '') != null)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 12, top: 2),
+                                child: Text(
+                                  _qualityHint(tier ?? '')!,
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        color: tier == 'coarse' ? Colors.red.shade700 : Colors.orange.shade800,
+                                      ),
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                   ],
