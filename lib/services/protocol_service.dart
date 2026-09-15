@@ -96,7 +96,7 @@ class ProtocolDefinition {
       plotExtraFields: [],
       speciesConfig: ProtocolSpeciesConfig(
         pinnedSpecies: ['SPALT', 'SPPAT', 'BARE', 'DEAD'],
-        require100Percent: false,
+        require100Percent: true,
         coverIncrement: 1,
         minSpecies: 0,
         maxSpecies: null,
