@@ -20,6 +20,8 @@ PODS:
   - Mantle (2.2.0):
     - Mantle/extobjc (= 2.2.0)
   - Mantle/extobjc (2.2.0)
+  - native_exif (0.0.1):
+    - Flutter
   - open_file_ios (1.0.3):
     - Flutter
   - SDWebImage (5.21.7):
@@ -34,6 +36,7 @@ PODS:
 DEPENDENCIES:
   - Flutter (from `Flutter`)
   - flutter_image_compress_common (from `.symlinks/plugins/flutter_image_compress_common/ios`)
+  - native_exif (from `.symlinks/plugins/native_exif/ios`)
   - open_file_ios (from `.symlinks/plugins/open_file_ios/ios`)
   - workmanager_apple (from `.symlinks/plugins/workmanager_apple/ios`)
 
@@ -49,6 +52,8 @@ EXTERNAL SOURCES:
     :path: Flutter
   flutter_image_compress_common:
     :path: ".symlinks/plugins/flutter_image_compress_common/ios"
+  native_exif:
+    :path: ".symlinks/plugins/native_exif/ios"
   open_file_ios:
     :path: ".symlinks/plugins/open_file_ios/ios"
   workmanager_apple:
@@ -59,6 +64,7 @@ SPEC CHECKSUMS:
   flutter_image_compress_common: 1697a328fd72bfb335507c6bca1a65fa5ad87df1
   libwebp: 02b23773aedb6ff1fd38cec7a77b81414c6842a8
   Mantle: c5aa8794a29a022dfbbfc9799af95f477a69b62d
+  native_exif: 0eb73d3d5b3ca892719228df8d2d1b13d1ae396c
   open_file_ios: 46184d802ee7959203f6392abcfa0dd49fdb5be0
   SDWebImage: e9fc87c1aab89a8ab1bbd74eba378c6f53be8abf
   SDWebImageWebPCoder: 0e06e365080397465cc73a7a9b472d8a3bd0f377
