@@ -132,6 +132,8 @@ class SyncService {
       'distance_along_transect_m': veg['distance_along_transect_m'],
       'latitude': veg['latitude'],
       'longitude': veg['longitude'],
+      'accuracy_m': veg['accuracy_m'],
+      'location_provider': veg['location_provider'],
       'elevation_m': veg['elevation_m'],
       'canopy_height_m': veg['canopy_height_m'],
       'thatch_height_m': veg['thatch_height_m'],

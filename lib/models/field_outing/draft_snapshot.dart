@@ -110,6 +110,8 @@ class DraftSnapshot {
       'distance_along_transect_m': plot.distanceAlongTransect,
       'latitude': plot.latitude,
       'longitude': plot.longitude,
+      'accuracy_m': plot.accuracyM,
+      'location_provider': plot.locationProvider,
       'elevation_m': plot.elevation,
       'canopy_height_m': plot.canopyHeight,
       'thatch_height_m': plot.thatchHeight,

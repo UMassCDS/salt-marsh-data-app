@@ -13,7 +13,7 @@ import 'seeds/template_seeds.dart';
 /// Main database class for MassMarsh app
 class AppDatabase {
   static const String _dbName = 'mass_marsh.db';
-  static const int _dbVersion = 9;
+  static const int _dbVersion = 10;
 
   static final AppDatabase _instance = AppDatabase._internal();
 
@@ -261,6 +261,14 @@ class AppDatabase {
         {'species_code': 'ALGAE', 'scientific_name': 'Algae', 'common_name': null, 'active': 1},
         conflictAlgorithm: ConflictAlgorithm.ignore,
       );
+    }
+    if (oldVersion < 10) {
+      // GPS fix quality: accuracy_m already exists on vegetation_records
+      await db.execute('ALTER TABLE field_outings ADD COLUMN accuracy_m REAL');
+      await db.execute('ALTER TABLE field_outings ADD COLUMN location_provider TEXT');
+      await db.execute('ALTER TABLE vegetation_records ADD COLUMN location_provider TEXT');
+      await db.execute('ALTER TABLE elevation_records ADD COLUMN accuracy_m REAL');
+      await db.execute('ALTER TABLE elevation_records ADD COLUMN location_provider TEXT');
     }
   }
 
