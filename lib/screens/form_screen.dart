@@ -1102,6 +1102,7 @@ class _FormScreenState extends ConsumerState<FormScreen>
                 'Canopy Height (m)',
                 Icons.height,
                 isNumber: true,
+                allowNegative: false,
               ),
             if (!(_activeProtocol?.isFieldHidden('thatch_height_m') ?? false))
               _buildPlotTextField(
@@ -1111,6 +1112,7 @@ class _FormScreenState extends ConsumerState<FormScreen>
                 'Thatch Height (m)',
                 Icons.height,
                 isNumber: true,
+                allowNegative: false,
               ),
             if (!(_activeProtocol?.isFieldHidden('elevation_navd88_m') ?? false))
               _buildPlotTextField(
@@ -1304,6 +1306,7 @@ class _FormScreenState extends ConsumerState<FormScreen>
     bool isNumber = false,
     bool isDropdown = false,
     bool isOptional = false,
+    bool allowNegative = true,
     int maxLines = 1,
     List<String>? dropdownOptions,
     TextEditingController? controller,
@@ -1355,7 +1358,12 @@ class _FormScreenState extends ConsumerState<FormScreen>
           border: const OutlineInputBorder(),
           prefixIcon: Icon(icon),
         ),
-        keyboardType: isNumber ? TextInputType.number : TextInputType.text,
+        keyboardType: isNumber
+            ? TextInputType.numberWithOptions(decimal: true, signed: allowNegative)
+            : TextInputType.text,
+        inputFormatters: isNumber && !allowNegative
+            ? [FilteringTextInputFormatter.deny(RegExp(r'-'))]
+            : null,
         maxLines: maxLines,
         onChanged: (value) {
           setState(() {
@@ -1394,6 +1402,12 @@ class _FormScreenState extends ConsumerState<FormScreen>
         validator: (value) {
           if (!isOptional && (value == null || value.isEmpty)) {
             return 'This field is required';
+          }
+          if (!allowNegative && value != null) {
+            final parsed = double.tryParse(value);
+            if (parsed != null && parsed < 0) {
+              return 'Cannot be negative';
+            }
           }
           return null;
         },
