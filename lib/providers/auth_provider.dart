@@ -19,12 +19,18 @@ class AuthState {
   final bool isInitialized;
   final String? error;
 
+  /// True when the session was restored from the local cache and the
+  /// server could not be reached to confirm it, so the user is signed
+  /// in on a stale, offline copy of their account.
+  final bool signedInOffline;
+
   const AuthState({
     this.user,
     this.token,
     this.isLoading = false,
     this.isInitialized = false,
     this.error,
+    this.signedInOffline = false,
   });
 
   bool get isAuthenticated => token != null && user != null;
@@ -38,6 +44,7 @@ class AuthState {
     bool clearError = false,
     bool clearUser = false,
     bool clearToken = false,
+    bool? signedInOffline,
   }) {
     return AuthState(
       user: clearUser ? null : (user ?? this.user),
@@ -45,6 +52,7 @@ class AuthState {
       isLoading: isLoading ?? this.isLoading,
       isInitialized: isInitialized ?? this.isInitialized,
       error: clearError ? null : (error ?? this.error),
+      signedInOffline: signedInOffline ?? this.signedInOffline,
     );
   }
 }
@@ -124,10 +132,18 @@ class AuthNotifier extends Notifier<AuthState> {
       // Any other failure - timeout, no connection, 5xx - is not proof the
       // token is invalid, so the session (cached or not) is left standing
       appLogger.w('[auth] restore: network error (${e.type}), keeping cached session');
-      if (cachedUser == null) state = const AuthState(isInitialized: true);
+      if (cachedUser == null) {
+        state = const AuthState(isInitialized: true);
+      } else {
+        state = state.copyWith(signedInOffline: true);
+      }
     } catch (e) {
       appLogger.w('[auth] restore: unexpected error, keeping cached session: $e');
-      if (cachedUser == null) state = const AuthState(isInitialized: true);
+      if (cachedUser == null) {
+        state = const AuthState(isInitialized: true);
+      } else {
+        state = state.copyWith(signedInOffline: true);
+      }
     } finally {
       // No-op if the cache-hit branch already marked it. Only the no-cache
       // path reaches here first, since it has no earlier answer to give

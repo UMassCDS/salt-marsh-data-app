@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/field_outing/field_outing.dart';
+import '../providers/auth_provider.dart';
 import '../providers/field_outing_provider.dart';
 import '../providers/org_provider.dart';
 import '../services/protocol_service.dart';
 import '../services/species_service.dart';
+import '../utils/snackbar_utils.dart';
 import 'drafts_screen.dart';
 import 'form_screen.dart';
 
@@ -108,6 +110,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen(authProvider, (previous, next) {
+      if (next.signedInOffline && !(previous?.signedInOffline ?? false)) {
+        showAppSnackBar(
+          context,
+          "Signed in offline - showing your last synced data",
+          backgroundColor: Colors.blueGrey,
+          duration: const Duration(seconds: 4),
+        );
+      }
+    });
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final orgName = ref.watch(selectedOrgProvider)?.name ?? '';
