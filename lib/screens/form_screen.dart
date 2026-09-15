@@ -62,9 +62,11 @@ class _FormScreenState extends ConsumerState<FormScreen>
   String _visibility = 'public';
   String? _embargoUntil;
 
-  // GPS capture state, per plot index - live accuracy shown while sampling
-  final Set<int> _gpsCapturing = {};
-  final Map<int, double> _gpsLiveAccuracy = {};
+  // GPS capture state, keyed by plot.localId (not list index) - a plot can
+  // be deleted while a ~15s capture is in flight, which would otherwise
+  // shift indices and write the result into the wrong plot
+  final Set<String> _gpsCapturing = {};
+  final Map<String, double> _gpsLiveAccuracy = {};
 
   // Image picker
   final ImagePicker _imagePicker = ImagePicker();
@@ -416,6 +418,8 @@ class _FormScreenState extends ConsumerState<FormScreen>
               distanceAlongTransect: (record['distance_along_transect_m'] as num?)?.toDouble() ?? 0.0,
               latitude: (record['latitude'] as num?)?.toDouble() ?? 0.0,
               longitude: (record['longitude'] as num?)?.toDouble() ?? 0.0,
+              accuracyM: (record['accuracy_m'] as num?)?.toDouble(),
+              locationQuality: record['location_quality'] as String?,
               canopyHeight: (record['canopy_height_m'] as num?)?.toDouble() ?? 0.0,
               thatchHeight: (record['thatch_height_m'] as num?)?.toDouble() ?? 0.0,
               elevation: (record['elevation_m'] as num?)?.toDouble(),
@@ -578,7 +582,15 @@ class _FormScreenState extends ConsumerState<FormScreen>
   /// early once accuracy crosses the "good" threshold. On timeout, keeps
   /// whatever best fix was seen (labelled by its quality tier) rather than
   /// failing outright - a fix is more useful than none in the field.
-  Future<void> _getGPSLocation(int plotIndex) async {
+  Future<void> _getGPSLocation(String plotLocalId) async {
+    // Resolved fresh each time it's needed - a ~15s capture can outlive the
+    // plot's position in the list, or the plot itself, if the user deletes
+    // a plot while a capture is in flight
+    int? currentIndex() {
+      final idx = _plots.indexWhere((p) => p.localId == plotLocalId);
+      return idx == -1 ? null : idx;
+    }
+
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
@@ -620,8 +632,8 @@ class _FormScreenState extends ConsumerState<FormScreen>
           : LocationAccuracy.best;
 
       setState(() {
-        _gpsCapturing.add(plotIndex);
-        _gpsLiveAccuracy.remove(plotIndex);
+        _gpsCapturing.add(plotLocalId);
+        _gpsLiveAccuracy.remove(plotLocalId);
       });
 
       Position? best;
@@ -639,7 +651,7 @@ class _FormScreenState extends ConsumerState<FormScreen>
         if (best == null || position.accuracy < best!.accuracy) {
           best = position;
           if (mounted) {
-            setState(() => _gpsLiveAccuracy[plotIndex] = position.accuracy);
+            setState(() => _gpsLiveAccuracy[plotLocalId] = position.accuracy);
           }
         }
         if (position.accuracy <= _gpsGoodAccuracyM && !completer.isCompleted) {
@@ -658,8 +670,8 @@ class _FormScreenState extends ConsumerState<FormScreen>
 
       if (best == null) {
         setState(() {
-          _gpsCapturing.remove(plotIndex);
-          _gpsLiveAccuracy.remove(plotIndex);
+          _gpsCapturing.remove(plotLocalId);
+          _gpsLiveAccuracy.remove(plotLocalId);
         });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -671,16 +683,20 @@ class _FormScreenState extends ConsumerState<FormScreen>
 
       final position = best!;
       final tier = _qualityTierFor(position.accuracy);
+      final index = currentIndex();
       setState(() {
-        _plots[plotIndex].latitude = position.latitude;
-        _plots[plotIndex].longitude = position.longitude;
-        _plots[plotIndex].accuracyM = position.accuracy;
-        _plots[plotIndex].locationProvider = tier;
-        _plots[plotIndex].latController.text = position.latitude.toStringAsFixed(6);
-        _plots[plotIndex].lngController.text = position.longitude.toStringAsFixed(6);
-        _gpsCapturing.remove(plotIndex);
-        _gpsLiveAccuracy.remove(plotIndex);
+        if (index != null) {
+          _plots[index].latitude = position.latitude;
+          _plots[index].longitude = position.longitude;
+          _plots[index].accuracyM = position.accuracy;
+          _plots[index].locationQuality = tier;
+          _plots[index].latController.text = position.latitude.toStringAsFixed(6);
+          _plots[index].lngController.text = position.longitude.toStringAsFixed(6);
+        }
+        _gpsCapturing.remove(plotLocalId);
+        _gpsLiveAccuracy.remove(plotLocalId);
       });
+      if (index == null) return; // plot was deleted mid-capture
       _onEdited();
       if (tier == 'coarse' && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -691,8 +707,8 @@ class _FormScreenState extends ConsumerState<FormScreen>
     } catch (e) {
       if (mounted) {
         setState(() {
-          _gpsCapturing.remove(plotIndex);
-          _gpsLiveAccuracy.remove(plotIndex);
+          _gpsCapturing.remove(plotLocalId);
+          _gpsLiveAccuracy.remove(plotLocalId);
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('❌ GPS error: $e')),
@@ -1166,10 +1182,10 @@ class _FormScreenState extends ConsumerState<FormScreen>
 
             // GPS Button + live/result accuracy indicator
             Builder(builder: (context) {
-              final isCapturing = _gpsCapturing.contains(index);
-              final liveAccuracy = _gpsLiveAccuracy[index];
+              final isCapturing = _gpsCapturing.contains(plot.localId);
+              final liveAccuracy = _gpsLiveAccuracy[plot.localId];
               final hasFix = plot.latitude != 0 || plot.longitude != 0;
-              final tier = plot.locationProvider;
+              final tier = plot.locationQuality;
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Column(
@@ -1178,7 +1194,7 @@ class _FormScreenState extends ConsumerState<FormScreen>
                     SizedBox(
                       height: 48,
                       child: ElevatedButton.icon(
-                        onPressed: isCapturing ? null : () => _getGPSLocation(index),
+                        onPressed: isCapturing ? null : () => _getGPSLocation(plot.localId),
                         icon: isCapturing
                             ? const SizedBox(
                                 width: 18,

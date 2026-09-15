@@ -111,7 +111,7 @@ class DraftSnapshot {
       'latitude': plot.latitude,
       'longitude': plot.longitude,
       'accuracy_m': plot.accuracyM,
-      'location_provider': plot.locationProvider,
+      'location_quality': plot.locationQuality,
       'elevation_m': plot.elevation,
       'canopy_height_m': plot.canopyHeight,
       'thatch_height_m': plot.thatchHeight,

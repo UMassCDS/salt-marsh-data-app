@@ -265,10 +265,10 @@ class AppDatabase {
     if (oldVersion < 10) {
       // GPS fix quality: accuracy_m already exists on vegetation_records
       await db.execute('ALTER TABLE field_outings ADD COLUMN accuracy_m REAL');
-      await db.execute('ALTER TABLE field_outings ADD COLUMN location_provider TEXT');
-      await db.execute('ALTER TABLE vegetation_records ADD COLUMN location_provider TEXT');
+      await db.execute('ALTER TABLE field_outings ADD COLUMN location_quality TEXT');
+      await db.execute('ALTER TABLE vegetation_records ADD COLUMN location_quality TEXT');
       await db.execute('ALTER TABLE elevation_records ADD COLUMN accuracy_m REAL');
-      await db.execute('ALTER TABLE elevation_records ADD COLUMN location_provider TEXT');
+      await db.execute('ALTER TABLE elevation_records ADD COLUMN location_quality TEXT');
     }
   }
 

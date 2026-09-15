@@ -26,7 +26,7 @@ class PlotData {
   double latitude;
   double longitude;
   double? accuracyM;
-  String? locationProvider;
+  String? locationQuality;
   double canopyHeight;
   double thatchHeight;
   double? elevation;
@@ -54,7 +54,7 @@ class PlotData {
     required this.latitude,
     required this.longitude,
     this.accuracyM,
-    this.locationProvider,
+    this.locationQuality,
     required this.canopyHeight,
     required this.thatchHeight,
     this.elevation,
