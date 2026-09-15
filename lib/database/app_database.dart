@@ -13,7 +13,7 @@ import 'seeds/template_seeds.dart';
 /// Main database class for MassMarsh app
 class AppDatabase {
   static const String _dbName = 'mass_marsh.db';
-  static const int _dbVersion = 8;
+  static const int _dbVersion = 9;
 
   static final AppDatabase _instance = AppDatabase._internal();
 
@@ -249,6 +249,19 @@ class AppDatabase {
         'ALTER TABLE vegetation_records ADD COLUMN photo_upload_attempts INTEGER DEFAULT 0',
       );
     }
+    if (oldVersion < 9) {
+      // Seed rows added after initial install won't exist on upgraded devices
+      await db.insert(
+        'species_lookup',
+        {'species_code': 'WATER', 'scientific_name': 'Water', 'common_name': null, 'active': 1},
+        conflictAlgorithm: ConflictAlgorithm.ignore,
+      );
+      await db.insert(
+        'species_lookup',
+        {'species_code': 'ALGAE', 'scientific_name': 'Algae', 'common_name': null, 'active': 1},
+        conflictAlgorithm: ConflictAlgorithm.ignore,
+      );
+    }
   }
 
   /// Seed initial data into database
@@ -264,6 +277,8 @@ class AppDatabase {
       ('TEST_NEW', 'Test New', null),
       ('DEAD', 'Dead Vegetation', null),
       ('WRACK', 'Wrack', null),
+      ('WATER', 'Water', null),
+      ('ALGAE', 'Algae', null),
       ('TRMAR', 'Triglochin maritima', 'Seaside Arrowgrass'),
       ('TECAN', 'Teucrium canadensis', 'Canada Germander'),
       ('JUBAL', 'Juncus balticus', 'Baltic Rush'),
