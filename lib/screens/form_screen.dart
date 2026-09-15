@@ -1423,7 +1423,7 @@ class _FormScreenState extends ConsumerState<FormScreen>
             const SizedBox(height: 16),
 
             // Species observations
-            _SpeciesInput(
+            SpeciesCoverInput(
               plot: plot,
               allSpecies: _allSpecies,
               onChanged: () {
@@ -2125,7 +2125,7 @@ class _PercentInputFormatter extends TextInputFormatter {
   }
 }
 
-class _SpeciesInput extends StatefulWidget {
+class SpeciesCoverInput extends StatefulWidget {
   final PlotData plot;
   final List<SpeciesItem> allSpecies;
   final VoidCallback onChanged;
@@ -2133,7 +2133,8 @@ class _SpeciesInput extends StatefulWidget {
   final List<String> pinnedCodes;
   final bool require100Percent;
 
-  const _SpeciesInput({
+  const SpeciesCoverInput({
+    super.key,
     required this.plot,
     required this.allSpecies,
     required this.onChanged,
@@ -2143,10 +2144,10 @@ class _SpeciesInput extends StatefulWidget {
   });
 
   @override
-  State<_SpeciesInput> createState() => _SpeciesInputState();
+  State<SpeciesCoverInput> createState() => SpeciesCoverInputState();
 }
 
-class _SpeciesInputState extends State<_SpeciesInput> {
+class SpeciesCoverInputState extends State<SpeciesCoverInput> {
   static const _pinnedLabels = {
     'SPALT': 'Smooth Cordgrass',
     'SPPAT': 'Salt Meadow Cordgrass',
@@ -2269,15 +2270,19 @@ class _SpeciesInputState extends State<_SpeciesInput> {
     widget.onChanged();
   }
 
-  Widget _speciesLabel(BuildContext context, String code, String commonLabel, String scientificName) {
+  Widget _speciesLabel(BuildContext context, String code, String commonLabel, String scientificName,
+      {required bool isWideScreen}) {
     final theme = Theme.of(context);
+    // A touch smaller on narrow phones so more of the name fits before it
+    // has to truncate - still ellipsizes past that, by design
+    final primaryStyle = isWideScreen ? theme.textTheme.bodyLarge : theme.textTheme.bodyMedium;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           scientificName.isEmpty ? commonLabel : scientificName,
-          style: theme.textTheme.bodyLarge?.copyWith(
+          style: primaryStyle?.copyWith(
             fontStyle: scientificName.isEmpty ? FontStyle.normal : FontStyle.italic,
             fontWeight: FontWeight.w600,
           ),
@@ -2373,10 +2378,15 @@ class _SpeciesInputState extends State<_SpeciesInput> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'Species in this Plot (${plot.species.length})',
-              style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+            Flexible(
+              child: Text(
+                'Species in this Plot (${plot.species.length})',
+                style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
+            const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
@@ -2423,7 +2433,8 @@ class _SpeciesInputState extends State<_SpeciesInput> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Expanded(
-                    child: _speciesLabel(context, code, '$code \u2013 $commonLabel', scientificName),
+                    child: _speciesLabel(context, code, '$code \u2013 $commonLabel', scientificName,
+                        isWideScreen: isWideScreen),
                   ),
                   buildCoverInput(
                     code: code,
@@ -2441,7 +2452,8 @@ class _SpeciesInputState extends State<_SpeciesInput> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _speciesLabel(context, code, '$code \u2013 $commonLabel', scientificName),
+                _speciesLabel(context, code, '$code \u2013 $commonLabel', scientificName,
+                    isWideScreen: isWideScreen),
                 const SizedBox(height: 4),
                 buildCoverInput(
                   code: code,
@@ -2470,7 +2482,7 @@ class _SpeciesInputState extends State<_SpeciesInput> {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Expanded(child: _speciesLabel(context, code, commonLabel, scientificName)),
+                    Expanded(child: _speciesLabel(context, code, commonLabel, scientificName, isWideScreen: isWideScreen)),
                     buildCoverInput(
                       code: code,
                       controller: controller,
@@ -2493,7 +2505,7 @@ class _SpeciesInputState extends State<_SpeciesInput> {
                 children: [
                   Row(
                     children: [
-                      Expanded(child: _speciesLabel(context, code, commonLabel, scientificName)),
+                      Expanded(child: _speciesLabel(context, code, commonLabel, scientificName, isWideScreen: isWideScreen)),
                       IconButton(
                         icon: const Icon(Icons.close, size: 18, color: Colors.red),
                         padding: EdgeInsets.zero,
