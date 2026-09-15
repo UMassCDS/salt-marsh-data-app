@@ -87,7 +87,9 @@ class _FormScreenState extends ConsumerState<FormScreen>
     'High Marsh',
     'Pool',
     'Upper Edge',
-    'Transition'
+    'Transition',
+    'Panne',
+    'Ditch'
   ];
 
   // Species loaded from API/cache
