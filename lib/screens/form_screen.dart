@@ -62,6 +62,10 @@ class _FormScreenState extends ConsumerState<FormScreen>
   String _visibility = 'public';
   String? _embargoUntil;
 
+  // GPS capture state, per plot index - live accuracy shown while sampling
+  final Set<int> _gpsCapturing = {};
+  final Map<int, double> _gpsLiveAccuracy = {};
+
   // Image picker
   final ImagePicker _imagePicker = ImagePicker();
 
@@ -547,10 +551,35 @@ class _FormScreenState extends ConsumerState<FormScreen>
     super.dispose();
   }
 
-  /// Get GPS location and update plot coordinates
+  // Quality tiers inferred from accuracy, since geolocator's Position has
+  // no `provider` field to read on Android 12+ (fused always wins there) -
+  // see the GPS design note in the v0.8 backlog plan.
+  static const _gpsGoodAccuracyM = 8.0;
+  static const _gpsFairAccuracyM = 20.0;
+  static const _gpsSampleWindow = Duration(seconds: 15);
+  static const _gpsMaxFixAge = Duration(seconds: 5);
+  static const _gpsPhotoStampMaxAge = Duration(minutes: 2);
+
+  static String _qualityTierFor(double accuracyM) {
+    if (accuracyM <= _gpsGoodAccuracyM) return 'gps_good';
+    if (accuracyM <= _gpsFairAccuracyM) return 'gps_fair';
+    return 'coarse';
+  }
+
+  static String _qualityLabel(String tier) => switch (tier) {
+        'gps_good' => 'good',
+        'gps_fair' => 'fair',
+        'coarse' => 'coarse',
+        _ => tier,
+      };
+
+  /// Samples live GPS fixes for up to [_gpsSampleWindow], discarding stale
+  /// and mocked fixes, keeping the best-accuracy fix seen, and stopping
+  /// early once accuracy crosses the "good" threshold. On timeout, keeps
+  /// whatever best fix was seen (labelled by its quality tier) rather than
+  /// failing outright - a fix is more useful than none in the field.
   Future<void> _getGPSLocation(int plotIndex) async {
     try {
-      // Check if location services are enabled
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         if (mounted) {
@@ -561,7 +590,6 @@ class _FormScreenState extends ConsumerState<FormScreen>
         return;
       }
 
-      // Check location permissions
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
@@ -586,30 +614,86 @@ class _FormScreenState extends ConsumerState<FormScreen>
         return;
       }
 
-      // Approximate location grants can't satisfy a "high" accuracy fix and
-      // will hang indefinitely (getCurrentPosition has no default timeout).
       final accuracyStatus = await Geolocator.getLocationAccuracy();
       final desiredAccuracy = accuracyStatus == LocationAccuracyStatus.reduced
           ? LocationAccuracy.reduced
-          : LocationAccuracy.high;
+          : LocationAccuracy.best;
 
-      Position position = await Geolocator.getCurrentPosition(
-        locationSettings: LocationSettings(
-          accuracy: desiredAccuracy,
-          timeLimit: const Duration(seconds: 20),
-        ),
+      setState(() {
+        _gpsCapturing.add(plotIndex);
+        _gpsLiveAccuracy.remove(plotIndex);
+      });
+
+      Position? best;
+      final stream = Geolocator.getPositionStream(
+        locationSettings: LocationSettings(accuracy: desiredAccuracy),
       );
+      final sub = stream.listen(null);
+      final completer = Completer<void>();
 
-      // Update plot coordinates
+      sub.onData((position) {
+        if (position.isMocked) return;
+        final age = DateTime.now().difference(position.timestamp);
+        if (age > _gpsMaxFixAge) return; // stale cached/fused fix, ignore
+
+        if (best == null || position.accuracy < best!.accuracy) {
+          best = position;
+          if (mounted) {
+            setState(() => _gpsLiveAccuracy[plotIndex] = position.accuracy);
+          }
+        }
+        if (position.accuracy <= _gpsGoodAccuracyM && !completer.isCompleted) {
+          completer.complete();
+        }
+      });
+      sub.onError((_) {});
+
+      await Future.any([
+        completer.future,
+        Future.delayed(_gpsSampleWindow),
+      ]);
+      await sub.cancel();
+
+      if (!mounted) return;
+
+      if (best == null) {
+        setState(() {
+          _gpsCapturing.remove(plotIndex);
+          _gpsLiveAccuracy.remove(plotIndex);
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not get a GPS fix - try again in the open')),
+          );
+        }
+        return;
+      }
+
+      final position = best!;
+      final tier = _qualityTierFor(position.accuracy);
       setState(() {
         _plots[plotIndex].latitude = position.latitude;
         _plots[plotIndex].longitude = position.longitude;
+        _plots[plotIndex].accuracyM = position.accuracy;
+        _plots[plotIndex].locationProvider = tier;
         _plots[plotIndex].latController.text = position.latitude.toStringAsFixed(6);
         _plots[plotIndex].lngController.text = position.longitude.toStringAsFixed(6);
+        _gpsCapturing.remove(plotIndex);
+        _gpsLiveAccuracy.remove(plotIndex);
       });
-
+      _onEdited();
+      if (tier == 'coarse' && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(
+              'GPS fix is coarse (±${position.accuracy.toStringAsFixed(0)}m) - consider moving to open sky and retrying')),
+        );
+      }
     } catch (e) {
       if (mounted) {
+        setState(() {
+          _gpsCapturing.remove(plotIndex);
+          _gpsLiveAccuracy.remove(plotIndex);
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('❌ GPS error: $e')),
         );
@@ -1080,19 +1164,62 @@ class _FormScreenState extends ConsumerState<FormScreen>
               controller: plot.lngController,
             ),
 
-            // GPS Button
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: ElevatedButton.icon(
-                onPressed: () => _getGPSLocation(index),
-                icon: const Icon(Icons.my_location),
-                label: const Text('Get GPS Location'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
+            // GPS Button + live/result accuracy indicator
+            Builder(builder: (context) {
+              final isCapturing = _gpsCapturing.contains(index);
+              final liveAccuracy = _gpsLiveAccuracy[index];
+              final hasFix = plot.latitude != 0 || plot.longitude != 0;
+              final tier = plot.locationProvider;
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      height: 48,
+                      child: ElevatedButton.icon(
+                        onPressed: isCapturing ? null : () => _getGPSLocation(index),
+                        icon: isCapturing
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              )
+                            : const Icon(Icons.my_location),
+                        label: Text(isCapturing
+                            ? (liveAccuracy != null
+                                ? 'Capturing… ±${liveAccuracy.toStringAsFixed(0)} m'
+                                : 'Capturing GPS…')
+                            : (hasFix ? 'Recapture GPS Location' : 'Get GPS Location')),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ),
+                    if (!isCapturing && hasFix && plot.accuracyM != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Chip(
+                          avatar: Icon(
+                            tier == 'gps_good'
+                                ? Icons.check_circle
+                                : (tier == 'gps_fair' ? Icons.info : Icons.warning),
+                            size: 18,
+                            color: tier == 'gps_good'
+                                ? Colors.green
+                                : (tier == 'gps_fair' ? Colors.orange : Colors.red),
+                          ),
+                          label: Text(
+                            '±${plot.accuracyM!.toStringAsFixed(0)} m · ${_qualityLabel(tier ?? '')}',
+                          ),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ),
+                  ],
                 ),
-              ),
-            ),
+              );
+            }),
 
             if (!(_activeProtocol?.isFieldHidden('canopy_height_m') ?? false))
               _buildPlotTextField(
@@ -1634,6 +1761,13 @@ class _FormScreenState extends ConsumerState<FormScreen>
 
         final last = await Geolocator.getLastKnownPosition();
         if (last == null) return;
+        // An unbounded cached fix can be arbitrarily old (a fix from a
+        // different site, hours earlier) - write no GPS EXIF at all rather
+        // than stamp the photo with a wrong location.
+        if (DateTime.now().difference(last.timestamp) > _gpsPhotoStampMaxAge) {
+          return;
+        }
+        if (last.isMocked) return;
         lat = last.latitude;
         lon = last.longitude;
       }
