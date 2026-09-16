@@ -7,8 +7,8 @@ import '../providers/field_outing_provider.dart';
 import '../providers/org_provider.dart';
 import '../services/protocol_service.dart';
 import '../services/species_service.dart';
-import 'drafts_screen.dart';
 import 'form/form_screen.dart';
+import 'outings/drafts_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -156,7 +156,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // ── Hero banner ──────────────────────────────────────────────
+            // Hero banner
             Container(
               padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
               decoration: BoxDecoration(
@@ -214,7 +214,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // ── Start a session ──────────────────────────────────
+                  // Start a session
                   _SectionHeader(label: 'Start a Field Session'),
                   const SizedBox(height: 12),
 
@@ -244,7 +244,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     onTap: () => _openMonitoringType('elevation'),
                   ),
 
-                  // ── Quick links ──────────────────────────────────────
+                  // Quick links
                   const SizedBox(height: 28),
                   _SectionHeader(label: 'Quick Links'),
                   const SizedBox(height: 8),
@@ -282,7 +282,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
-// ── Reusable sub-widgets ────────────────────────────────────────────────────
+// Reusable sub-widgets
 
 class _SectionHeader extends StatelessWidget {
   final String label;

@@ -55,7 +55,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       backgroundColor: colorScheme.primary,
       body: Column(
         children: [
-          // ── Top branding section (primary colour) ──────────────────────
+          // Top branding section (primary colour)
           SafeArea(
             bottom: false,
             child: Padding(
@@ -96,7 +96,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
           ),
 
-          // ── Bottom form section (surface colour, rounded top) ──────────
+          // Bottom form section (surface colour, rounded top)
           Expanded(
             child: Container(
               decoration: BoxDecoration(

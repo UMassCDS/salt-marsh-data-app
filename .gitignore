@@ -57,7 +57,7 @@ app.*.map.json
 # Xcode-managed SPM resolution inside CocoaPods workspace (auto-deleted by Xcode)
 ios/Runner.xcworkspace/xcshareddata/swiftpm/Package.resolved
 
-# Firebase config files — contain API keys, regenerate with `flutterfire configure`
+# Firebase config files - contain API keys, regenerate with `flutterfire configure`
 ios/Runner/GoogleService-Info.plist
 android/app/google-services.json
 lib/firebase_options.dart

@@ -5,9 +5,7 @@ import '../database/app_database.dart';
 import 'app_logger.dart';
 import 'sync_service.dart';
 
-// ---------------------------------------------------------------------------
 // Protocol definition data classes
-// ---------------------------------------------------------------------------
 
 class ProtocolSpeciesConfig {
   final List<String> pinnedSpecies;
@@ -104,9 +102,7 @@ class ProtocolDefinition {
   }
 }
 
-// ---------------------------------------------------------------------------
 // Protocol service (mirrors SpeciesService pattern exactly)
-// ---------------------------------------------------------------------------
 
 class ProtocolService {
   static final ProtocolService instance = ProtocolService._();

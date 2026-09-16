@@ -123,7 +123,7 @@ class AppDatabase {
       await db.execute('ALTER TABLE vegetation_records ADD COLUMN plot_id TEXT');
     }
     if (oldVersion < 4) {
-      // Remove FK constraint on org_id — org IDs come from the API, not local DB.
+      // Remove FK constraint on org_id - org IDs come from the API, not local DB.
       // SQLite requires recreating the table to drop a constraint.
       await db.execute('PRAGMA foreign_keys = OFF');
       await db.execute('ALTER TABLE field_outings RENAME TO _field_outings_old');
