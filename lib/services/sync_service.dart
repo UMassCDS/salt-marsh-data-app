@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:logger/logger.dart';
@@ -230,8 +229,6 @@ class SyncService {
         where: 'outing_id = ?',
         whereArgs: [localOutingId],
       );
-
-      print('vegRecords: $vegRecords');
 
       // Upload photos first, collect blob URLs (or errors) keyed by local_id
       final photoUrls = <String, String>{};
