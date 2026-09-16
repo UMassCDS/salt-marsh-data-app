@@ -232,8 +232,6 @@ class SyncService {
         whereArgs: [localOutingId],
       );
 
-      print('vegRecords: $vegRecords');
-
       // Upload photos first, collect blob URLs (or errors) keyed by local_id
       final photoUrls = <String, String>{};
       final photoErrors = <String, String>{};
@@ -321,8 +319,19 @@ class SyncService {
       _logger.d('Response status: ${response.statusCode}');
 
       if (response.statusCode == 200 && response.data['success'] == true) {
-        final serverId = response.data['server_id'] as int;
-        final childRecordIds = response.data['child_records'] as Map<String, dynamic>;
+        // Validated explicitly (rather than letting a bad cast throw into the
+        // generic catch below) so a backend schema change is diagnosable from
+        // field logs as "unexpected response shape", not a cryptic TypeError
+        // indistinguishable from a network hiccup
+        final rawServerId = response.data['server_id'];
+        final rawChildRecords = response.data['child_records'];
+        if (rawServerId is! int || rawChildRecords is! Map) {
+          _logger.e('Unexpected response shape from server for field outing '
+              'upload: server_id=$rawServerId child_records=$rawChildRecords');
+          return null;
+        }
+        final serverId = rawServerId;
+        final childRecordIds = rawChildRecords.cast<String, dynamic>();
 
         // Update local record with server ID and sync status
         await db.update(

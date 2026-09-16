@@ -45,7 +45,7 @@ class FormConfigDao {
       return existing.orgId;
     } else {
       // Insert new config
-      return await _db.insert(
+      return _db.insert(
         'form_configs',
         data,
         conflictAlgorithm: ConflictAlgorithm.replace,
@@ -87,7 +87,7 @@ class FormConfigDao {
   ///
   /// Returns the number of rows deleted (1 if successful, 0 if not found).
   Future<int> deleteFormConfig(int orgId) async {
-    return await _db.delete(
+    return _db.delete(
       'form_configs',
       where: 'org_id = ?',
       whereArgs: [orgId],

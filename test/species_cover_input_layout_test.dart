@@ -5,7 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mass_marsh_app/models/field_outing/plot_data.dart';
-import 'package:mass_marsh_app/screens/form_screen.dart';
+import 'package:mass_marsh_app/screens/form/widgets/species_cover_input.dart';
 import 'package:mass_marsh_app/services/species_service.dart';
 
 const _devices = {
@@ -18,8 +18,8 @@ const _devices = {
 final _species = [
   const SpeciesItem(code: 'SPALT', scientificName: 'Spartina alterniflora', commonName: 'Smooth Cordgrass'),
   const SpeciesItem(code: 'SPPAT', scientificName: 'Spartina patens', commonName: 'Saltmeadow Cordgrass'),
-  const SpeciesItem(code: 'BARE', scientificName: 'Bare Ground', commonName: null),
-  const SpeciesItem(code: 'DEAD', scientificName: 'Dead Vegetation', commonName: null),
+  const SpeciesItem(code: 'BARE', scientificName: 'Bare Ground'),
+  const SpeciesItem(code: 'DEAD', scientificName: 'Dead Vegetation'),
   // Deliberately long names - the real longest entries in the seed list -
   // to stress-test truncation on the narrowest screen.
   const SpeciesItem(code: 'AGSTO', scientificName: 'Agrostis stolonifera', commonName: 'Creeping Bentgrass, a very long common name to force truncation'),

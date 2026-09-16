@@ -99,9 +99,7 @@ class ProtocolDefinition {
         require100Percent: true,
         coverIncrement: 1,
         minSpecies: 0,
-        maxSpecies: null,
       ),
-      subclassOptions: null,
     );
   }
 }

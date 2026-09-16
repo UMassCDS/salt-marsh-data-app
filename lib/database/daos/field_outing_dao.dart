@@ -1,9 +1,11 @@
-import 'dart:math';
 import 'package:sqflite/sqflite.dart';
+import 'package:uuid/uuid.dart';
 import '../../models/field_outing/field_outing.dart';
 
 /// Data Access Object for FieldOuting records
 class FieldOutingDao {
+  static const _uuid = Uuid();
+
   final Database db;
 
   FieldOutingDao(this.db);
@@ -144,24 +146,6 @@ class FieldOutingDao {
     );
   }
 
-  /// Mark outing as synced (update with server ID)
-  Future<void> markSynced(
-    String localId, {
-    required int serverId,
-  }) async {
-    await db.update(
-      'field_outings',
-      {
-        'id': serverId,
-        'sync_status': 'synced',
-        'is_draft': 0,
-        'updated_at': DateTime.now().toIso8601String(),
-      },
-      where: 'local_id = ?',
-      whereArgs: [localId],
-    );
-  }
-
   /// Delete field outing (and cascade to all related records)
   Future<void> deleteFieldOuting(int id) async {
     await db.delete(
@@ -200,9 +184,5 @@ class FieldOutingDao {
     return FieldOuting.fromMap(row);
   }
 
-  /// Generate a simple UUID (v4-like)
-  /// Note: For production, use uuid package
-  String _generateUuid() {
-    return 'local_${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(10000)}';
-  }
+  String _generateUuid() => _uuid.v4();
 }
