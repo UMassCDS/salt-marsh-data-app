@@ -20,10 +20,10 @@ import '../../services/species_service.dart';
 import '../../services/protocol_service.dart';
 import '../../utils/id_utils.dart';
 import '../../utils/snackbar_utils.dart';
-import 'common_fields.dart';
-import 'plot_card.dart';
-
-enum _AutosaveStatus { idle, saving, saved, error }
+import 'widgets/action_bar.dart';
+import 'widgets/common_fields.dart';
+import 'widgets/monitoring_forms.dart';
+import 'widgets/plot_card.dart';
 
 class FormScreen extends ConsumerStatefulWidget {
   final String monitoringType;
@@ -111,7 +111,7 @@ class _FormScreenState extends ConsumerState<FormScreen>
 
   late final DraftAutosave _autosave = DraftAutosave(save: _persistDraft);
 
-  _AutosaveStatus _autosaveStatus = _AutosaveStatus.idle;
+  AutosaveStatus _autosaveStatus = AutosaveStatus.idle;
   Timer? _autosaveFadeTimer;
 
   void _onEdited() {
@@ -605,89 +605,6 @@ class _FormScreenState extends ConsumerState<FormScreen>
     }
   }
 
-  Widget? _buildAutosaveIndicator() {
-    final colorScheme = Theme.of(context).colorScheme;
-    final IconData icon;
-    final String label;
-    final Color color;
-
-    switch (_autosaveStatus) {
-      case _AutosaveStatus.idle:
-        return null;
-      case _AutosaveStatus.saving:
-        icon = Icons.sync;
-        label = 'Saving to device…';
-        color = colorScheme.onSurface.withValues(alpha: 0.6);
-      case _AutosaveStatus.saved:
-        icon = Icons.check_circle_outline;
-        label = 'Saved on this device';
-        color = colorScheme.onSurface.withValues(alpha: 0.6);
-      case _AutosaveStatus.error:
-        icon = Icons.error_outline;
-        label = 'Not saved yet, retrying…';
-        color = colorScheme.error;
-    }
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: color),
-          const SizedBox(width: 4),
-          Text(label, style: TextStyle(fontSize: 12, color: color)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionBar() {
-    final indicator = _buildAutosaveIndicator();
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2)),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ?indicator,
-          Row(
-            children: [
-              Expanded(
-                flex: 3,
-                child: FilledButton.icon(
-                  onPressed: () => _saveDraft(context, ref),
-                  icon: const Icon(Icons.save_outlined),
-                  label: const Text('Save Draft'),
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                flex: 2,
-                child: OutlinedButton.icon(
-                  onPressed: () => _endSessionWithConfirm(context, ref),
-                  icon: const Icon(Icons.check_circle_outline),
-                  label: const Text('End Session'),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
   Future<void> _endSessionWithConfirm(BuildContext context, WidgetRef ref) async {
     final saved = await _saveDraft(context, ref, navigateAway: false);
     if (!saved || !mounted) return;
@@ -754,7 +671,11 @@ class _FormScreenState extends ConsumerState<FormScreen>
           : null,
       body: Column(
         children: [
-          _buildActionBar(),
+          FormActionBar(
+            autosaveStatus: _autosaveStatus,
+            onSaveDraft: () => _saveDraft(context, ref),
+            onEndSession: () => _endSessionWithConfirm(context, ref),
+          ),
           Expanded(
             child: Center(
               child: ConstrainedBox(
@@ -797,9 +718,25 @@ class _FormScreenState extends ConsumerState<FormScreen>
                               if (widget.monitoringType == 'vegetation')
                                 _buildVegetationSectionHeader()
                               else if (widget.monitoringType == 'hydrology')
-                                _buildHydrologyForm()
+                                HydrologyForm(
+                                  areaTreatmentController: _areaTreatmentController,
+                                  wlrTypeController: _wlrTypeController,
+                                  serialNumberController: _serialNumberController,
+                                  waypointNumberController: _waypointNumberController,
+                                  rtkElevationController: _rtkElevationController,
+                                  waterAboveBelowController: _waterAboveBelowController,
+                                  wellRimToWaterController: _wellRimToWaterController,
+                                  wellRimToMarshController: _wellRimToMarshController,
+                                )
                               else if (widget.monitoringType == 'elevation')
-                                _buildElevationForm(),
+                                ElevationForm(
+                                  transectIdController: _transectIdController,
+                                  pointNumberController: _pointNumberController,
+                                  latitudeController: _latitudeController,
+                                  longitudeController: _longitudeController,
+                                  elevationNavd88Controller: _elevationNavd88Controller,
+                                  featureTypeController: _featureTypeController,
+                                ),
                             ],
                           ),
                         ),
@@ -995,38 +932,6 @@ class _FormScreenState extends ConsumerState<FormScreen>
         );
       }
     });
-  }
-
-  Widget _buildHydrologyForm() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const SectionHeader('Hydrology Measurement Information'),
-        AppTextField(_areaTreatmentController, 'Area Treatment', Icons.eco, isOptional: true),
-        AppTextField(_wlrTypeController, 'WLR Type', Icons.water, isOptional: true),
-        AppTextField(_serialNumberController, 'Serial Number', Icons.fingerprint, isOptional: true),
-        AppTextField(_waypointNumberController, 'Waypoint Number', Icons.location_on, inputType: TextInputType.number),
-        AppTextField(_rtkElevationController, 'RTK Elevation (NAVD88 m)', Icons.height, inputType: TextInputType.number),
-        AppTextField(_waterAboveBelowController, 'Water Above/Below NUT (m)', Icons.water, inputType: TextInputType.number, isOptional: true),
-        AppTextField(_wellRimToWaterController, 'Well Rim to Water (m)', Icons.water, inputType: TextInputType.number, isOptional: true),
-        AppTextField(_wellRimToMarshController, 'Well Rim to Marsh (m)', Icons.water, inputType: TextInputType.number, isOptional: true),
-      ],
-    );
-  }
-
-  Widget _buildElevationForm() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const SectionHeader('Elevation Point Information'),
-        AppTextField(_transectIdController, 'Transect ID', Icons.timeline),
-        AppTextField(_pointNumberController, 'Point Number', Icons.numbers, inputType: TextInputType.number),
-        AppTextField(_latitudeController, 'Latitude', Icons.location_on, inputType: TextInputType.number),
-        AppTextField(_longitudeController, 'Longitude', Icons.location_on, inputType: TextInputType.number),
-        AppTextField(_elevationNavd88Controller, 'Elevation (NAVD88 m)', Icons.landscape, inputType: TextInputType.number),
-        AppTextField(_featureTypeController, 'Feature Type', Icons.landscape, isOptional: true),
-      ],
-    );
   }
 
   /// Copies the picked image to the app's documents directory so the path
@@ -1237,25 +1142,25 @@ class _FormScreenState extends ConsumerState<FormScreen>
     // Any in-flight fade belongs to a previous save - let this attempt's
     // own outcome (saved or error) decide what's shown next
     _autosaveFadeTimer?.cancel();
-    if (mounted) setState(() => _autosaveStatus = _AutosaveStatus.saving);
+    if (mounted) setState(() => _autosaveStatus = AutosaveStatus.saving);
     try {
       final captured = _captureDraft();
       await _writeDraft(captured);
       _markClean();
       if (mounted) {
-        setState(() => _autosaveStatus = _AutosaveStatus.saved);
+        setState(() => _autosaveStatus = AutosaveStatus.saved);
         // A static "Saved" label stops getting read after a few seconds;
         // fading it back to idle keeps it meaningful as a one-off event.
         // Errors are left out of this - they stay until the next attempt
         // resolves, since that's the one state a user needs to act on
         _autosaveFadeTimer = Timer(const Duration(seconds: 2), () {
-          if (mounted && _autosaveStatus == _AutosaveStatus.saved) {
-            setState(() => _autosaveStatus = _AutosaveStatus.idle);
+          if (mounted && _autosaveStatus == AutosaveStatus.saved) {
+            setState(() => _autosaveStatus = AutosaveStatus.idle);
           }
         });
       }
     } catch (e) {
-      if (mounted) setState(() => _autosaveStatus = _AutosaveStatus.error);
+      if (mounted) setState(() => _autosaveStatus = AutosaveStatus.error);
       rethrow;
     }
   }

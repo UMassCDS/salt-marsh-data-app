@@ -13,7 +13,7 @@ import '../../utils/database_export_helper.dart';
 import '../../utils/sign_out_confirmation.dart';
 import '../../utils/snackbar_utils.dart';
 import '../login_screen.dart';
-import 'sections.dart';
+import 'widgets/sections.dart';
 
 final _packageInfoProvider =
     FutureProvider<PackageInfo>((ref) => PackageInfo.fromPlatform());

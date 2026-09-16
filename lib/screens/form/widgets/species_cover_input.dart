@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../models/field_outing/plot_data.dart';
-import '../../services/species_service.dart';
+import '../../../models/field_outing/plot_data.dart';
+import '../../../services/species_service.dart';
 
 class SpeciesCoverInput extends StatefulWidget {
   final PlotData plot;

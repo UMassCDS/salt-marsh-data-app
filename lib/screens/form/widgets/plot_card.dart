@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../models/field_outing/plot_data.dart';
-import '../../services/protocol_service.dart';
-import '../../services/species_service.dart';
-import '../../utils/photo_viewer.dart';
+import '../../../models/field_outing/plot_data.dart';
+import '../../../services/protocol_service.dart';
+import '../../../services/species_service.dart';
+import '../../../utils/photo_viewer.dart';
 import 'species_cover_input.dart';
 
 class CollapsedPlotSummary extends StatelessWidget {

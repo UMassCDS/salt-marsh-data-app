@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../models/user/user.dart';
+import '../../../models/user/user.dart';
 import 'settings_widgets.dart';
 
 String _initials(String fullName) {
