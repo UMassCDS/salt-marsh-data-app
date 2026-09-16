@@ -114,7 +114,7 @@ class _OutingsScreenState extends ConsumerState<OutingsScreen> {
   }
 }
 
-// ── Supporting widgets ──────────────────────────────────────────────────────
+// Supporting widgets
 
 class _SessionCard extends StatelessWidget {
   final dynamic session;

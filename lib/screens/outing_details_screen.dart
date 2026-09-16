@@ -127,7 +127,7 @@ class _OutingDetailsScreenState extends ConsumerState<OutingDetailsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Status + type banner ──────────────────────────────────
+            // Status + type banner
             Row(
               children: [
                 _TypeBadge(
@@ -142,7 +142,7 @@ class _OutingDetailsScreenState extends ConsumerState<OutingDetailsScreen> {
             ),
             const SizedBox(height: 16),
 
-            // ── Session info card ─────────────────────────────────────
+            // Session info card
             _SectionCard(
               title: 'Session Info',
               children: [
@@ -184,7 +184,7 @@ class _OutingDetailsScreenState extends ConsumerState<OutingDetailsScreen> {
             ),
             const SizedBox(height: 16),
 
-            // ── Records ───────────────────────────────────────────────
+            // Records
             Row(
               children: [
                 Text('Records',
@@ -235,7 +235,7 @@ class _OutingDetailsScreenState extends ConsumerState<OutingDetailsScreen> {
   }
 }
 
-// ── Sub-widgets ─────────────────────────────────────────────────────────────
+// Sub-widgets
 
 class _TypeBadge extends StatelessWidget {
   final String type;

@@ -131,7 +131,7 @@ class DraftsScreen extends ConsumerWidget {
   }
 }
 
-// ── Supporting widgets ──────────────────────────────────────────────────────
+// Supporting widgets
 
 class _DraftCard extends StatelessWidget {
   final FieldOuting draft;
