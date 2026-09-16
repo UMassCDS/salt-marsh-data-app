@@ -607,7 +607,7 @@ class _FormScreenState extends ConsumerState<FormScreen>
 
   Future<void> _endSessionWithConfirm(BuildContext context, WidgetRef ref) async {
     final saved = await _saveDraft(context, ref);
-    if (!saved || !mounted) return;
+    if (!saved || !context.mounted) return;
 
     final confirm = await showDialog<bool>(
       context: context,
@@ -631,7 +631,7 @@ class _FormScreenState extends ConsumerState<FormScreen>
       ),
     );
 
-    if (confirm == true && mounted) {
+    if (confirm == true && context.mounted) {
       await _saveFieldOuting(context, ref);
     }
   }
@@ -1170,17 +1170,17 @@ class _FormScreenState extends ConsumerState<FormScreen>
     try {
       await _persistDraft();
 
-      if (mounted) {
+      if (context.mounted) {
         showAppSnackBar(context, 'Draft saved!');
 
         if (navigateAway) {
           await Future.delayed(const Duration(milliseconds: 500));
-          if (mounted) Navigator.of(context).pop();
+          if (context.mounted) Navigator.of(context).pop();
         }
       }
       return true;
     } catch (e) {
-      if (mounted) {
+      if (context.mounted) {
         showAppSnackBar(
           context,
           'Error saving draft: $e',
@@ -1261,7 +1261,7 @@ class _FormScreenState extends ConsumerState<FormScreen>
       _currentDraftId = null;
       _markClean();
 
-      if (mounted) {
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Session saved, uploading to server...'),
@@ -1271,12 +1271,12 @@ class _FormScreenState extends ConsumerState<FormScreen>
 
         // Navigate back after snackbar appears
         await Future.delayed(const Duration(milliseconds: 500));
-        if (mounted) {
+        if (context.mounted) {
           Navigator.of(context).pop();
         }
       }
     } catch (e) {
-      if (mounted) {
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error saving field session: $e')),
         );

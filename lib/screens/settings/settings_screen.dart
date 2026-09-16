@@ -39,10 +39,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _signOut() async {
     final confirmed = await confirmSignOut(context);
-    if (confirmed && context.mounted) {
+    if (confirmed && mounted) {
       ref.read(selectedOrgProvider.notifier).clear();
       await ref.read(authProvider.notifier).logout();
-      if (context.mounted) {
+      if (mounted) {
         unawaited(Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const LoginScreen()),
           (route) => false,
