@@ -267,12 +267,24 @@ class AppDatabase {
       );
     }
     if (oldVersion < 10) {
-      // GPS fix quality: accuracy_m already exists on vegetation_records
-      await db.execute('ALTER TABLE field_outings ADD COLUMN accuracy_m REAL');
-      await db.execute('ALTER TABLE field_outings ADD COLUMN location_quality TEXT');
-      await db.execute('ALTER TABLE vegetation_records ADD COLUMN location_quality TEXT');
-      await db.execute('ALTER TABLE elevation_records ADD COLUMN accuracy_m REAL');
-      await db.execute('ALTER TABLE elevation_records ADD COLUMN location_quality TEXT');
+      // GPS fix quality: accuracy_m already exists on vegetation_records.
+      // Guarded by existence check - an interrupted upgrade (app killed
+      // mid-migration) can leave a column physically added without
+      // user_version having been bumped, which would otherwise crash every
+      // future launch with "duplicate column name" before the app can start
+      await _addColumnIfMissing(db, 'field_outings', 'accuracy_m', 'REAL');
+      await _addColumnIfMissing(db, 'field_outings', 'location_quality', 'TEXT');
+      await _addColumnIfMissing(db, 'vegetation_records', 'location_quality', 'TEXT');
+      await _addColumnIfMissing(db, 'elevation_records', 'accuracy_m', 'REAL');
+      await _addColumnIfMissing(db, 'elevation_records', 'location_quality', 'TEXT');
+    }
+  }
+
+  Future<void> _addColumnIfMissing(Database db, String table, String column, String sqlType) async {
+    final info = await db.rawQuery('PRAGMA table_info($table)');
+    final exists = info.any((row) => row['name'] == column);
+    if (!exists) {
+      await db.execute('ALTER TABLE $table ADD COLUMN $column $sqlType');
     }
   }
 
