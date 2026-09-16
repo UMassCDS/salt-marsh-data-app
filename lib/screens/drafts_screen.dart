@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
@@ -111,9 +113,9 @@ class DraftsScreen extends ConsumerWidget {
         await service.deleteDraft(draft.id!);
         if (context.mounted) {
           showAppSnackBar(context, 'Draft deleted');
-          Navigator.of(context).pushReplacement(
+          unawaited(Navigator.of(context).pushReplacement(
             MaterialPageRoute(builder: (context) => const DraftsScreen()),
-          );
+          ));
         }
       } catch (e) {
         if (context.mounted) {

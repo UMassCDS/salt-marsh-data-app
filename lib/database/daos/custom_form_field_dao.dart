@@ -17,7 +17,7 @@ class CustomFormFieldDAO {
         ? jsonEncode(field.options!.map((o) => o.toJson()).toList())
         : null;
 
-    return await _db.insert(
+    return _db.insert(
       'custom_form_fields',
       json,
       conflictAlgorithm: ConflictAlgorithm.replace,
@@ -46,7 +46,7 @@ class CustomFormFieldDAO {
       orderBy: 'order_index ASC, created_at ASC',
     );
 
-    return result.map((row) => _fromDatabase(row)).toList();
+    return result.map(_fromDatabase).toList();
   }
 
   Future<List<CustomFormField>> getAllCustomFieldsByOrg(int orgId) async {
@@ -57,7 +57,7 @@ class CustomFormFieldDAO {
       orderBy: 'form_name, order_index ASC',
     );
 
-    return result.map((row) => _fromDatabase(row)).toList();
+    return result.map(_fromDatabase).toList();
   }
 
   Future<int> updateCustomField(CustomFormField field) async {
@@ -71,7 +71,7 @@ class CustomFormFieldDAO {
         ? jsonEncode(field.options!.map((o) => o.toJson()).toList())
         : null;
 
-    return await _db.update(
+    return _db.update(
       'custom_form_fields',
       json,
       where: 'id = ?',
@@ -80,7 +80,7 @@ class CustomFormFieldDAO {
   }
 
   Future<int> deleteCustomField(int id) async {
-    return await _db.delete(
+    return _db.delete(
       'custom_form_fields',
       where: 'id = ?',
       whereArgs: [id],
@@ -88,7 +88,7 @@ class CustomFormFieldDAO {
   }
 
   Future<int> softDeleteCustomField(int id) async {
-    return await _db.update(
+    return _db.update(
       'custom_form_fields',
       {'is_active': 0, 'updated_at': DateTime.now().toIso8601String()},
       where: 'id = ?',
@@ -122,7 +122,7 @@ class CustomFormFieldDAO {
     json['published_at'] = version.publishedAt?.toIso8601String();
     json['created_at'] = version.createdAt?.toIso8601String();
 
-    return await _db.insert(
+    return _db.insert(
       'form_versions',
       json,
       conflictAlgorithm: ConflictAlgorithm.replace,
@@ -150,7 +150,7 @@ class CustomFormFieldDAO {
       orderBy: 'version_number DESC',
     );
 
-    return result.map((row) => _formVersionFromDatabase(row)).toList();
+    return result.map(_formVersionFromDatabase).toList();
   }
 
   CustomFormField _fromDatabase(Map<String, dynamic> map) {

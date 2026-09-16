@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/field_outing/field_outing.dart';
@@ -67,9 +69,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
 
     if (drafts.length > 1) {
-      Navigator.of(context).push(MaterialPageRoute(
+      unawaited(Navigator.of(context).push(MaterialPageRoute(
         builder: (_) => DraftsScreen(monitoringTypeFilter: monitoringType),
-      ));
+      )));
       return;
     }
 

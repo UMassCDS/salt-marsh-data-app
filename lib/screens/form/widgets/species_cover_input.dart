@@ -174,7 +174,7 @@ class SpeciesCoverInputState extends State<SpeciesCoverInput> {
             onSelected: (_) => onChanged(v.toString()),
             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             visualDensity: VisualDensity.compact,
-            padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 0),
+            padding: const EdgeInsets.symmetric(horizontal: 2),
           );
         }),
       );
@@ -206,7 +206,6 @@ class SpeciesCoverInputState extends State<SpeciesCoverInput> {
             return Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Expanded(
                     child: _speciesLabel(context, code, '$code – $commonLabel', scientificName),
@@ -253,7 +252,6 @@ class SpeciesCoverInputState extends State<SpeciesCoverInput> {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Expanded(child: _speciesLabel(context, code, commonLabel, scientificName)),
                     buildCoverInput(

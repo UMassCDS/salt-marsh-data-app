@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sqflite/sqflite.dart';
 import '../database/app_database.dart';
@@ -109,14 +110,14 @@ class FieldOutingService {
 
     if (result.isNotEmpty && !session.isDraft) {
       final dbId = result.first['id'] as int;
-      SyncService.instance.uploadFieldOuting(dbId).then((serverId) {
+      unawaited(SyncService.instance.uploadFieldOuting(dbId).then((serverId) {
         if (serverId != null) {
           // Refresh again to show sync status
           _refreshNotifier.increment();
         }
       }).catchError((error) {
         // Sync failed - record will stay as pending and retry later
-      });
+      }));
     }
 
     return localId;
@@ -155,11 +156,11 @@ class FieldOutingService {
     _refreshNotifier.increment();
 
     if (dbId != null && !session.isDraft) {
-      SyncService.instance.uploadFieldOuting(dbId!).then((serverId) {
+      unawaited(SyncService.instance.uploadFieldOuting(dbId!).then((serverId) {
         if (serverId != null) {
           _refreshNotifier.increment();
         }
-      }).catchError((_) {});
+      }).catchError((_) {}));
     }
 
     return localId;
@@ -251,11 +252,11 @@ class FieldOutingService {
     _refreshNotifier.increment();
 
     if (!isDraft) {
-      SyncService.instance.uploadFieldOuting(draftId).then((serverId) {
+      unawaited(SyncService.instance.uploadFieldOuting(draftId).then((serverId) {
         if (serverId != null) {
           _refreshNotifier.increment();
         }
-      }).catchError((_) {});
+      }).catchError((_) {}));
     }
   }
 
@@ -300,7 +301,7 @@ class FieldOutingService {
     );
 
     appLogger.i('[drafts] query: userId=$userId orgId=$orgId -> ${result.length} row(s)');
-    return result.map((row) => FieldOuting.fromMap(row)).toList();
+    return result.map(FieldOuting.fromMap).toList();
   }
 
   // Same org/account scoping as getDrafts(), plus monitoring type, so

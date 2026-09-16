@@ -102,7 +102,7 @@ class _FormScreenState extends ConsumerState<FormScreen>
   final Map<String, GlobalKey> _plotCardKeys = {};
 
   GlobalKey _keyFor(PlotData plot) =>
-      _plotCardKeys.putIfAbsent(plot.localId, () => GlobalKey());
+      _plotCardKeys.putIfAbsent(plot.localId, GlobalKey.new);
 
   bool _isPlotExpanded(PlotData plot) {
     final expandedId = _expandedPlotLocalId;
@@ -539,7 +539,7 @@ class _FormScreenState extends ConsumerState<FormScreen>
   Future<void> _getGPSLocation(int plotIndex) async {
     try {
       // Check if location services are enabled
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -581,7 +581,7 @@ class _FormScreenState extends ConsumerState<FormScreen>
           ? LocationAccuracy.reduced
           : LocationAccuracy.high;
 
-      Position position = await Geolocator.getCurrentPosition(
+      final position = await Geolocator.getCurrentPosition(
         locationSettings: LocationSettings(
           accuracy: desiredAccuracy,
           timeLimit: const Duration(seconds: 20),
@@ -606,7 +606,7 @@ class _FormScreenState extends ConsumerState<FormScreen>
   }
 
   Future<void> _endSessionWithConfirm(BuildContext context, WidgetRef ref) async {
-    final saved = await _saveDraft(context, ref, navigateAway: false);
+    final saved = await _saveDraft(context, ref);
     if (!saved || !mounted) return;
 
     final confirm = await showDialog<bool>(
@@ -1056,13 +1056,13 @@ class _FormScreenState extends ConsumerState<FormScreen>
       final isAM = cleanTime.contains('AM');
 
       // Remove AM/PM
-      String timePart = cleanTime.replaceAll('PM', '').replaceAll('AM', '');
+      final timePart = cleanTime.replaceAll('PM', '').replaceAll('AM', '');
       final parts = timePart.split(':');
 
       if (parts.length != 2) return null;
 
       int hour = int.parse(parts[0]);
-      int minute = int.parse(parts[1]);
+      final minute = int.parse(parts[1]);
 
       // Convert to 24-hour format
       if (isPM && hour != 12) {
@@ -1195,11 +1195,11 @@ class _FormScreenState extends ConsumerState<FormScreen>
   Future<void> _saveFieldOuting(BuildContext context, WidgetRef ref) async {
     if (!_formKey.currentState!.validate()) {
       // Scroll to the top so the user can see the highlighted required fields.
-      _scrollController.animateTo(
+      unawaited(_scrollController.animateTo(
         0,
         duration: const Duration(milliseconds: 350),
         curve: Curves.easeOut,
-      );
+      ));
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Row(
@@ -1213,7 +1213,6 @@ class _FormScreenState extends ConsumerState<FormScreen>
           ),
           backgroundColor: Theme.of(context).colorScheme.error,
           behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 4),
         ),
       );
       return;
@@ -1235,7 +1234,6 @@ class _FormScreenState extends ConsumerState<FormScreen>
         monitoringType: widget.monitoringType,
         startTime: startTime,
         endTime: endTime,
-        isDraft: false,
         visibility: _visibility,
         embargoUntil: _embargoUntil,
         createdAt: DateTime.now(),
