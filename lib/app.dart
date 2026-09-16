@@ -9,7 +9,7 @@ import 'screens/form/form_screen.dart';
 import 'screens/outings_screen.dart';
 import 'screens/drafts_screen.dart';
 import 'screens/org_selection_screen.dart';
-import 'screens/settings_screen.dart';
+import 'screens/settings/settings_screen.dart';
 
 /// Seed colour — a rich marsh-green used to generate the full M3 palette.
 const _kSeedColor = Color(0xFF1B6B3A);
