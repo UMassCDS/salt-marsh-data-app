@@ -134,6 +134,11 @@ class SpeciesCoverInputState extends State<SpeciesCoverInput> {
     widget.onChanged();
   }
 
+  void _clearPinned(String code) {
+    widget.plot.pinnedControllers[code]?.clear();
+    _updatePinned(code, '');
+  }
+
   void _addExtra(SpeciesItem species) {
     final plot = widget.plot;
     if (plot.species.any((s) => s.speciesCode == species.code)) return;
@@ -325,6 +330,14 @@ class SpeciesCoverInputState extends State<SpeciesCoverInput> {
               .firstWhere((s) => s.speciesCode == code,
                   orElse: () => PlotSpeciesEntry(speciesCode: code, percentageCover: 0))
               .percentageCover;
+          final clearButton = currentValue > 0
+              ? IconButton(
+                  icon: const Icon(Icons.close, size: 18, color: Colors.red),
+                  padding: EdgeInsets.zero,
+                  tooltip: 'Reset to 0%',
+                  onPressed: () => _clearPinned(code),
+                )
+              : null;
           if (widget.coverIncrement == 1) {
             return Padding(
               key: _pinnedKey(code),
@@ -341,6 +354,7 @@ class SpeciesCoverInputState extends State<SpeciesCoverInput> {
                     currentValue: currentValue,
                     onChanged: (v) => _updatePinned(code, v),
                   ),
+                  ?clearButton,
                 ],
               ),
             );
@@ -351,8 +365,15 @@ class SpeciesCoverInputState extends State<SpeciesCoverInput> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _speciesLabel(context, code, '$code – $commonLabel', scientificName,
-                    isWideScreen: isWideScreen),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _speciesLabel(context, code, '$code – $commonLabel', scientificName,
+                          isWideScreen: isWideScreen),
+                    ),
+                    ?clearButton,
+                  ],
+                ),
                 const SizedBox(height: 4),
                 buildCoverInput(
                   code: code,

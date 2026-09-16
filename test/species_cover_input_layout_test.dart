@@ -43,7 +43,9 @@ void main() {
         canopyHeight: 0,
         thatchHeight: 0,
         species: [
-          PlotSpeciesEntry(speciesCode: 'SPALT', percentageCover: 0),
+          // Non-zero on purpose - exercises the pinned-row clear (x) button,
+          // which only renders when a pinned species has a value to clear
+          PlotSpeciesEntry(speciesCode: 'SPALT', percentageCover: 45),
           PlotSpeciesEntry(speciesCode: 'SPPAT', percentageCover: 0),
         ],
       );
