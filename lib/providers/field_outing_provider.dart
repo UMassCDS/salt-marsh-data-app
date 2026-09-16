@@ -299,15 +299,16 @@ class FieldOutingService {
   Future<void> deleteDraft(int id) async {
     final db = await ref.read(appDatabaseProvider.future);
     final database = await db.database;
-    
-    // Delete child records first
-    await database.delete('vegetation_records', where: 'outing_id = ?', whereArgs: [id]);
-    await database.delete('hydrology_records', where: 'outing_id = ?', whereArgs: [id]);
-    await database.delete('elevation_records', where: 'outing_id = ?', whereArgs: [id]);
-    
-    // Delete the draft outing
-    await database.delete('field_outings', where: 'id = ?', whereArgs: [id]);
-    
+
+    // One transaction so an interruption partway through can't leave
+    // orphaned child rows behind after only some deletes committed
+    await database.transaction((txn) async {
+      await txn.delete('vegetation_records', where: 'outing_id = ?', whereArgs: [id]);
+      await txn.delete('hydrology_records', where: 'outing_id = ?', whereArgs: [id]);
+      await txn.delete('elevation_records', where: 'outing_id = ?', whereArgs: [id]);
+      await txn.delete('field_outings', where: 'id = ?', whereArgs: [id]);
+    });
+
     _refreshNotifier.increment();
   }
 
