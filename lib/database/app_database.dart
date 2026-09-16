@@ -107,7 +107,10 @@ class AppDatabase {
     await TemplateSeeds.seedOrganizations(db);
   }
 
-  /// Called when database version changes
+  /// Called when database version changes.
+  /// Keep the `if (oldVersion < N)` blocks below in ascending N order - they
+  /// run in source order, not numeric order, so a later migration assuming an
+  /// earlier one already ran would silently misbehave if these were reordered.
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     // Migration from version 1 to 2: Add server_id column to field_outings
     // Note: SQLite doesn't support UNIQUE constraint in ALTER TABLE, so we add it without UNIQUE
@@ -161,32 +164,6 @@ class AppDatabase {
       await db.execute('ALTER TABLE field_outings ADD COLUMN visibility TEXT');
       await db.execute('ALTER TABLE field_outings ADD COLUMN embargo_until TEXT');
     }
-    if (oldVersion < 7) {
-      // Add protocol_cache table
-      await db.execute('''
-        CREATE TABLE IF NOT EXISTS protocol_cache (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          org_id INTEGER NOT NULL UNIQUE,
-          protocol_code TEXT NOT NULL,
-          protocol_name TEXT NOT NULL,
-          definition_json TEXT NOT NULL,
-          cached_at TEXT DEFAULT (datetime('now'))
-        )
-      ''');
-      await db.execute(
-        'CREATE INDEX IF NOT EXISTS idx_protocol_cache_org ON protocol_cache(org_id)',
-      );
-      // Add protocol-specific columns to vegetation_records
-      await db.execute(
-        'ALTER TABLE vegetation_records ADD COLUMN protocol_code TEXT',
-      );
-      await db.execute(
-        'ALTER TABLE vegetation_records ADD COLUMN subclass TEXT',
-      );
-      await db.execute(
-        'ALTER TABLE vegetation_records ADD COLUMN rtk_point_number TEXT',
-      );
-    }
     if (oldVersion < 6) {
       // Drop kobo_id, kobo_uuid, and crew_leader columns.
       // SQLite requires a table rebuild to drop columns.
@@ -239,6 +216,32 @@ class AppDatabase {
       ''');
       await db.execute('DROP TABLE _field_outings_old');
       await db.execute('PRAGMA foreign_keys = ON');
+    }
+    if (oldVersion < 7) {
+      // Add protocol_cache table
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS protocol_cache (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          org_id INTEGER NOT NULL UNIQUE,
+          protocol_code TEXT NOT NULL,
+          protocol_name TEXT NOT NULL,
+          definition_json TEXT NOT NULL,
+          cached_at TEXT DEFAULT (datetime('now'))
+        )
+      ''');
+      await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_protocol_cache_org ON protocol_cache(org_id)',
+      );
+      // Add protocol-specific columns to vegetation_records
+      await db.execute(
+        'ALTER TABLE vegetation_records ADD COLUMN protocol_code TEXT',
+      );
+      await db.execute(
+        'ALTER TABLE vegetation_records ADD COLUMN subclass TEXT',
+      );
+      await db.execute(
+        'ALTER TABLE vegetation_records ADD COLUMN rtk_point_number TEXT',
+      );
     }
     if (oldVersion < 8) {
       // Separate from sync_status so a failed photo isn't indistinguishable from a synced one
