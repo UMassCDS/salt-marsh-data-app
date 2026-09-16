@@ -4,7 +4,7 @@ import '../providers/auth_provider.dart';
 import '../providers/field_outing_provider.dart';
 import '../models/field_outing/field_outing.dart';
 import '../utils/snackbar_utils.dart';
-import 'form_screen.dart';
+import 'form/form_screen.dart';
 
 class DraftsScreen extends ConsumerWidget {
   final String? monitoringTypeFilter;

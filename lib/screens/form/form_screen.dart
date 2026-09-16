@@ -9,18 +9,19 @@ import 'package:native_exif/native_exif.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
-import '../models/field_outing/draft_snapshot.dart';
-import '../models/field_outing/field_outing.dart';
-import '../models/field_outing/plot_data.dart';
-import '../providers/auth_provider.dart';
-import '../providers/field_outing_provider.dart';
-import '../providers/org_provider.dart';
-import '../services/draft_autosave.dart';
-import '../services/species_service.dart';
-import '../services/protocol_service.dart';
-import '../utils/id_utils.dart';
-import '../utils/photo_viewer.dart';
-import '../utils/snackbar_utils.dart';
+import '../../models/field_outing/draft_snapshot.dart';
+import '../../models/field_outing/field_outing.dart';
+import '../../models/field_outing/plot_data.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/field_outing_provider.dart';
+import '../../providers/org_provider.dart';
+import '../../services/draft_autosave.dart';
+import '../../services/species_service.dart';
+import '../../services/protocol_service.dart';
+import '../../utils/id_utils.dart';
+import '../../utils/snackbar_utils.dart';
+import 'common_fields.dart';
+import 'plot_card.dart';
 
 enum _AutosaveStatus { idle, saving, saved, error }
 
@@ -80,15 +81,6 @@ class _FormScreenState extends ConsumerState<FormScreen>
   late final _longitudeController = TextEditingController();
   late final _elevationNavd88Controller = TextEditingController();
   late final _featureTypeController = TextEditingController();
-
-  // Habitat type options for vegetation
-  static const List<String> _habitatOptions = [
-    'Low Marsh',
-    'High Marsh',
-    'Pool',
-    'Upper Edge',
-    'Transition'
-  ];
 
   // Species loaded from API/cache
   List<SpeciesItem> _allSpecies = [];
@@ -343,15 +335,15 @@ class _FormScreenState extends ConsumerState<FormScreen>
     try {
       final service = ref.read(fieldOutingServiceProvider);
       final draft = await service.getDraftById(widget.draftId!);
-      
+
       if (draft == null) return;
-      
+
       // Load basic fields
       _siteNameController.text = draft.siteName;
       if (draft.otherMembers != null) {
         _otherMembersController.text = draft.otherMembers!;
       }
-      
+
       // Load times if available
       if (draft.startTime != null) {
         final start = draft.startTime!;
@@ -371,7 +363,7 @@ class _FormScreenState extends ConsumerState<FormScreen>
       // Load child records based on monitoring type
       final db = await ref.read(appDatabaseProvider.future);
       final database = await db.database;
-      
+
       if (widget.monitoringType == 'vegetation') {
         final vegRecords = await database.query(
           'vegetation_records',
@@ -379,7 +371,7 @@ class _FormScreenState extends ConsumerState<FormScreen>
           whereArgs: [widget.draftId],
           orderBy: 'plot_number',
         );
-        
+
         setState(() {
           _plots = vegRecords.map((record) {
             List<PlotSpeciesEntry> species = [];
@@ -390,7 +382,7 @@ class _FormScreenState extends ConsumerState<FormScreen>
                 percentageCover: s['percentage_cover'] as int,
               )).toList();
             }
-            
+
             // photoPath alone isn't enough - the thumbnail renders off
             // photoFile, which a freshly loaded draft never had a chance to set
             final photoPath = record['photo_local_path'] as String?;
@@ -429,7 +421,7 @@ class _FormScreenState extends ConsumerState<FormScreen>
           whereArgs: [widget.draftId],
           limit: 1,
         );
-        
+
         if (hydroRecords.isNotEmpty) {
           final record = hydroRecords.first;
           setState(() {
@@ -466,7 +458,7 @@ class _FormScreenState extends ConsumerState<FormScreen>
           whereArgs: [widget.draftId],
           limit: 1,
         );
-        
+
         if (elevRecords.isNotEmpty) {
           final record = elevRecords.first;
           setState(() {
@@ -780,17 +772,25 @@ class _FormScreenState extends ConsumerState<FormScreen>
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               // COMMON FIELDS FOR ALL FORMS
-                              _buildSectionHeader('Field Session Information'),
-                              _buildReadOnlyField(
+                              const SectionHeader('Field Session Information'),
+                              ReadOnlyField(
                                 'Observer',
                                 ref.watch(authProvider).user?.fullName ?? '',
                                 Icons.person,
                               ),
-                              _buildTextField(_siteNameController, 'Site Name', Icons.location_on),
-                              _buildTextField(_otherMembersController, 'Other Team Members', Icons.people, maxLines: 2),
-                              _buildTimeField(_startTimeController, 'Start Time'),
-                              _buildTimeField(_endTimeController, 'End Time'),
-                              _buildVisibilitySelector(),
+                              AppTextField(_siteNameController, 'Site Name', Icons.location_on),
+                              AppTextField(_otherMembersController, 'Other Team Members', Icons.people, maxLines: 2),
+                              TimeField(_startTimeController, 'Start Time'),
+                              TimeField(_endTimeController, 'End Time'),
+                              VisibilitySelector(
+                                visibility: _visibility,
+                                embargoUntil: _embargoUntil,
+                                onVisibilityChanged: (v) => setState(() {
+                                  _visibility = v;
+                                  if (v != 'embargo') _embargoUntil = null;
+                                }),
+                                onEmbargoChanged: (d) => setState(() => _embargoUntil = d),
+                              ),
 
                               const SizedBox(height: 24),
 
@@ -839,7 +839,7 @@ class _FormScreenState extends ConsumerState<FormScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _buildSectionHeader('Vegetation Plots'),
+        const SectionHeader('Vegetation Plots'),
         Text(
           '${_plots.length} plot(s) added',
           style: Theme.of(context).textTheme.bodyMedium,
@@ -853,64 +853,89 @@ class _FormScreenState extends ConsumerState<FormScreen>
     return KeyedSubtree(
       key: _keyFor(plot),
       child: _isPlotExpanded(plot)
-          ? _buildPlotCard(index, plot)
-          : _buildCollapsedPlotSummary(plot),
+          ? PlotCard(
+              index: index,
+              plot: plot,
+              canDelete: _plots.length > 1,
+              activeProtocol: _activeProtocol,
+              allSpecies: _allSpecies,
+              onCollapse: () => setState(() => _expandedPlotLocalId = null),
+              onDelete: () => _deletePlot(index),
+              onFieldChanged: (field, value) => _onPlotFieldChanged(index, field, value),
+              onGetGpsLocation: () => _getGPSLocation(index),
+              onRtkChanged: (v) {
+                setState(() => plot.rtkPointNumber = v.isEmpty ? null : v);
+                _onEdited();
+              },
+              onSubclassChanged: (v) {
+                setState(() => plot.subclass = v);
+                _onEdited();
+              },
+              onRemovePhoto: () => setState(() {
+                _plots[index].photoFile = null;
+                _plots[index].photoPath = null;
+              }),
+              onTakePhoto: () => _pickImageFromCamera(index),
+              onChoosePhoto: () => _pickImageFromGallery(index),
+              onSpeciesChanged: () {
+                setState(() {});
+                _onEdited();
+              },
+            )
+          : CollapsedPlotSummary(
+              plot: plot,
+              onTap: () => setState(() => _expandedPlotLocalId = plot.localId),
+            ),
     );
   }
 
-  Widget _buildCollapsedPlotSummary(PlotData plot) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final label = plot.plotId.isNotEmpty
-        ? plot.plotId
-        : 'Plot ${plot.plotNumber}';
+  void _deletePlot(int index) {
+    setState(() {
+      final removed = _plots.removeAt(index);
+      _plotCardKeys.remove(removed.localId);
+      if (_expandedPlotLocalId == removed.localId) {
+        _expandedPlotLocalId = _plots.isEmpty ? null : _plots.last.localId;
+      }
+      removed.dispose();
+    });
+    _onEdited();
+  }
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () => setState(() => _expandedPlotLocalId = plot.localId),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
-            children: [
-              if (plot.photoFile != null)
-                Padding(
-                  padding: const EdgeInsets.only(right: 12),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
-                    child: Image.file(
-                      plot.photoFile!,
-                      width: 40,
-                      height: 40,
-                      fit: BoxFit.cover,
-                      cacheWidth: 80,
-                    ),
-                  ),
-                ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Plot ${plot.plotNumber} · $label',
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleSmall
-                            ?.copyWith(fontWeight: FontWeight.w600),
-                        overflow: TextOverflow.ellipsis),
-                    if (plot.species.isNotEmpty)
-                      Text('${plot.species.length} species recorded',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: colorScheme.onSurface.withValues(alpha: 0.6),
-                              )),
-                  ],
-                ),
-              ),
-              Icon(Icons.expand_more, color: colorScheme.onSurface.withValues(alpha: 0.5)),
-            ],
-          ),
-        ),
-      ),
-    );
+  void _onPlotFieldChanged(int plotIndex, String field, String value) {
+    setState(() {
+      switch (field) {
+        case 'plotId':
+          _plots[plotIndex].plotId = value;
+          _plots[plotIndex].plotIdManuallySet = value.isNotEmpty;
+        case 'transectId':
+          _plots[plotIndex].transectId = value;
+          if (!_plots[plotIndex].plotIdManuallySet) {
+            final id = _generatePlotId(
+              value,
+              _plots[plotIndex].plotNumber,
+            );
+            _plots[plotIndex].plotId = id;
+            _plots[plotIndex].plotIdController.text = id;
+          }
+        case 'habitatType':
+          _plots[plotIndex].habitatType = value;
+        case 'distanceAlongTransect':
+          _plots[plotIndex].distanceAlongTransect = double.tryParse(value) ?? 0;
+        case 'latitude':
+          _plots[plotIndex].latitude = double.tryParse(value) ?? 0;
+        case 'longitude':
+          _plots[plotIndex].longitude = double.tryParse(value) ?? 0;
+        case 'canopyHeight':
+          _plots[plotIndex].canopyHeight = double.tryParse(value) ?? 0;
+        case 'thatchHeight':
+          _plots[plotIndex].thatchHeight = double.tryParse(value) ?? 0;
+        case 'elevation':
+          _plots[plotIndex].elevation = double.tryParse(value);
+        case 'notes':
+          _plots[plotIndex].notes = value;
+      }
+    });
+    _onEdited();
   }
 
   void _addNewPlot() {
@@ -972,443 +997,19 @@ class _FormScreenState extends ConsumerState<FormScreen>
     });
   }
 
-  Widget _buildPlotCard(int index, PlotData plot) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Plot header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Plot ${plot.plotNumber}',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.expand_less),
-                      tooltip: 'Collapse',
-                      onPressed: () => setState(() => _expandedPlotLocalId = null),
-                    ),
-                    if (_plots.length > 1)
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                    onPressed: () {
-                      setState(() {
-                        final removed = _plots.removeAt(index);
-                        _plotCardKeys.remove(removed.localId);
-                        if (_expandedPlotLocalId == removed.localId) {
-                          _expandedPlotLocalId =
-                              _plots.isEmpty ? null : _plots.last.localId;
-                        }
-                        removed.dispose();
-                      });
-                      _onEdited();
-                    },
-                  ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            // Plot fields — conditional per protocol
-            if (!(_activeProtocol?.isFieldHidden('transect_id') ?? false))
-              _buildPlotTextField(
-                index,
-                'transectId',
-                plot.transectId,
-                'Transect ID',
-                Icons.timeline,
-              ),
-            _buildPlotTextField(
-              index,
-              'plotId',
-              '',
-              'Plot ID (e.g. CB_T1_P1)',
-              Icons.tag,
-              isOptional: true,
-              controller: plot.plotIdController,
-            ),
-            if (!(_activeProtocol?.isFieldHidden('habitat_type') ?? false))
-              _buildPlotTextField(
-                index,
-                'habitatType',
-                plot.habitatType,
-                'Habitat Type',
-                Icons.terrain,
-                isDropdown: true,
-                dropdownOptions: _habitatOptions,
-              ),
-            if (!(_activeProtocol?.isFieldHidden('distance_along_transect_m') ?? false))
-              _buildPlotTextField(
-                index,
-                'distanceAlongTransect',
-                plot.distanceAlongTransect == 0 ? '' : plot.distanceAlongTransect.toString(),
-                'Distance Along Transect (m)',
-                Icons.straighten,
-                isNumber: true,
-              ),
-            _buildPlotTextField(
-              index,
-              'latitude',
-              '',
-              'Latitude',
-              Icons.location_on,
-              isNumber: true,
-              controller: plot.latController,
-            ),
-            _buildPlotTextField(
-              index,
-              'longitude',
-              '',
-              'Longitude',
-              Icons.location_on,
-              isNumber: true,
-              controller: plot.lngController,
-            ),
-
-            // GPS Button
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: ElevatedButton.icon(
-                onPressed: () => _getGPSLocation(index),
-                icon: const Icon(Icons.my_location),
-                label: const Text('Get GPS Location'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
-                ),
-              ),
-            ),
-
-            if (!(_activeProtocol?.isFieldHidden('canopy_height_m') ?? false))
-              _buildPlotTextField(
-                index,
-                'canopyHeight',
-                plot.canopyHeight == 0 ? '' : plot.canopyHeight.toString(),
-                'Canopy Height (m)',
-                Icons.height,
-                isNumber: true,
-              ),
-            if (!(_activeProtocol?.isFieldHidden('thatch_height_m') ?? false))
-              _buildPlotTextField(
-                index,
-                'thatchHeight',
-                plot.thatchHeight == 0 ? '' : plot.thatchHeight.toString(),
-                'Thatch Height (m)',
-                Icons.height,
-                isNumber: true,
-              ),
-            if (!(_activeProtocol?.isFieldHidden('elevation_navd88_m') ?? false))
-              _buildPlotTextField(
-                index,
-                'elevation',
-                plot.elevation?.toString() ?? '',
-                'Elevation (m)',
-                Icons.landscape,
-                isNumber: true,
-                isOptional: true,
-              ),
-
-            // UASCommunity extra fields
-            if (_activeProtocol?.hasExtraField('rtk_point_number') ?? false)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: TextFormField(
-                  controller: plot.rtkPointNumberController,
-                  decoration: const InputDecoration(
-                    labelText: 'RTK Point #',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.pin_drop),
-                  ),
-                  onChanged: (v) {
-                    setState(() => plot.rtkPointNumber = v.isEmpty ? null : v);
-                    _onEdited();
-                  },
-                ),
-              ),
-            if (_activeProtocol?.hasExtraField('subclass') ?? false)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: DropdownButtonFormField<String>(
-                  key: ValueKey('subclass_${plot.localId}_${plot.subclass}'),
-                  initialValue: plot.subclass,
-                  decoration: const InputDecoration(
-                    labelText: 'Subclass',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.category),
-                  ),
-                  isExpanded: true,
-                  items: (_activeProtocol!.subclassOptions ?? [])
-                      .map((opt) => DropdownMenuItem(
-                            value: opt,
-                            child: Text(opt, overflow: TextOverflow.ellipsis),
-                          ))
-                      .toList(),
-                  onChanged: (v) {
-                    setState(() => plot.subclass = v);
-                    _onEdited();
-                  },
-                ),
-              ),
-
-            _buildPlotTextField(
-              index,
-              'notes',
-              plot.notes ?? '',
-              'Notes',
-              Icons.note,
-              maxLines: 2,
-              isOptional: true,
-            ),
-
-            const SizedBox(height: 16),
-
-            // Photo section
-            Text(
-              'Plot Photo',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            if (plot.photoFile != null)
-              Stack(
-                children: [
-                  GestureDetector(
-                    onTap: () => showFullScreenPhoto(context, plot.photoFile!),
-                    child: Image.file(
-                      plot.photoFile!,
-                      height: 200,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      // The file on disk stays full-resolution; only the
-                      // decoded-for-display copy is downsized, since a 12MP
-                      // photo decoded per plot is what likely OOM'd the app
-                      cacheWidth: 800,
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 8,
-                    left: 8,
-                    child: IgnorePointer(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.black54,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.zoom_in, color: Colors.white, size: 14),
-                            SizedBox(width: 4),
-                            Text('Tap to enlarge',
-                                style: TextStyle(color: Colors.white, fontSize: 11)),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: IconButton(
-                      icon: Icon(Icons.close, color: Colors.red[400]),
-                      style: IconButton.styleFrom(
-                        backgroundColor: Colors.white70,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _plots[index].photoFile = null;
-                          _plots[index].photoPath = null;
-                        });
-                      },
-                    ),
-                  ),
-                ],
-              )
-            else
-              Container(
-                height: 100,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Center(
-                  child: Text('No photo selected'),
-                ),
-              ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () => _pickImageFromCamera(index),
-                    icon: const Icon(Icons.camera_alt),
-                    label: const Text('Take Photo'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () => _pickImageFromGallery(index),
-                    icon: const Icon(Icons.image),
-                    label: const Text('Choose Photo'),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 16),
-            Divider(),
-            const SizedBox(height: 16),
-
-            // Species observations
-            _SpeciesInput(
-              plot: plot,
-              allSpecies: _allSpecies,
-              onChanged: () {
-                setState(() {});
-                _onEdited();
-              },
-              coverIncrement: _activeProtocol?.speciesConfig.coverIncrement ?? 1,
-              pinnedCodes: _activeProtocol?.speciesConfig.pinnedSpecies ?? const ['SPALT', 'SPPAT', 'BARE', 'DEAD'],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPlotTextField(
-    int plotIndex,
-    String field,
-    String currentValue,
-    String label,
-    IconData icon, {
-    bool isNumber = false,
-    bool isDropdown = false,
-    bool isOptional = false,
-    int maxLines = 1,
-    List<String>? dropdownOptions,
-    TextEditingController? controller,
-  }) {
-    if (isDropdown && dropdownOptions != null) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: DropdownButtonFormField<String>(
-          initialValue: currentValue.isEmpty ? null : currentValue,
-          items: dropdownOptions.map((option) {
-            return DropdownMenuItem(
-              value: option,
-              child: Text(option),
-            );
-          }).toList(),
-          onChanged: (value) {
-            if (value != null) {
-              setState(() {
-                switch (field) {
-                  case 'habitatType':
-                    _plots[plotIndex].habitatType = value;
-                }
-              });
-              _onEdited();
-            }
-          },
-          decoration: InputDecoration(
-            labelText: label,
-            border: const OutlineInputBorder(),
-            prefixIcon: Icon(icon),
-          ),
-          validator: (value) {
-            if (!isOptional && (value == null || value.isEmpty)) {
-              return 'This field is required';
-            }
-            return null;
-          },
-        ),
-      );
-    }
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: TextFormField(
-        controller: controller,
-        initialValue: controller != null ? null : currentValue,
-        decoration: InputDecoration(
-          labelText: label,
-          border: const OutlineInputBorder(),
-          prefixIcon: Icon(icon),
-        ),
-        keyboardType: isNumber ? TextInputType.number : TextInputType.text,
-        maxLines: maxLines,
-        onChanged: (value) {
-          setState(() {
-            switch (field) {
-              case 'plotId':
-                _plots[plotIndex].plotId = value;
-                _plots[plotIndex].plotIdManuallySet = value.isNotEmpty;
-              case 'transectId':
-                _plots[plotIndex].transectId = value;
-                if (!_plots[plotIndex].plotIdManuallySet) {
-                  final id = _generatePlotId(
-                    value,
-                    _plots[plotIndex].plotNumber,
-                  );
-                  _plots[plotIndex].plotId = id;
-                  _plots[plotIndex].plotIdController.text = id;
-                }
-              case 'distanceAlongTransect':
-                _plots[plotIndex].distanceAlongTransect = double.tryParse(value) ?? 0;
-              case 'latitude':
-                _plots[plotIndex].latitude = double.tryParse(value) ?? 0;
-              case 'longitude':
-                _plots[plotIndex].longitude = double.tryParse(value) ?? 0;
-              case 'canopyHeight':
-                _plots[plotIndex].canopyHeight = double.tryParse(value) ?? 0;
-              case 'thatchHeight':
-                _plots[plotIndex].thatchHeight = double.tryParse(value) ?? 0;
-              case 'elevation':
-                _plots[plotIndex].elevation = double.tryParse(value);
-              case 'notes':
-                _plots[plotIndex].notes = value;
-            }
-          });
-          _onEdited();
-        },
-        validator: (value) {
-          if (!isOptional && (value == null || value.isEmpty)) {
-            return 'This field is required';
-          }
-          return null;
-        },
-      ),
-    );
-  }
-
   Widget _buildHydrologyForm() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _buildSectionHeader('Hydrology Measurement Information'),
-        _buildTextField(_areaTreatmentController, 'Area Treatment', Icons.eco, isOptional: true),
-        _buildTextField(_wlrTypeController, 'WLR Type', Icons.water, isOptional: true),
-        _buildTextField(_serialNumberController, 'Serial Number', Icons.fingerprint, isOptional: true),
-        _buildTextField(_waypointNumberController, 'Waypoint Number', Icons.location_on, inputType: TextInputType.number),
-        _buildTextField(_rtkElevationController, 'RTK Elevation (NAVD88 m)', Icons.height, inputType: TextInputType.number),
-        _buildTextField(_waterAboveBelowController, 'Water Above/Below NUT (m)', Icons.water, inputType: TextInputType.number, isOptional: true),
-        _buildTextField(_wellRimToWaterController, 'Well Rim to Water (m)', Icons.water, inputType: TextInputType.number, isOptional: true),
-        _buildTextField(_wellRimToMarshController, 'Well Rim to Marsh (m)', Icons.water, inputType: TextInputType.number, isOptional: true),
+        const SectionHeader('Hydrology Measurement Information'),
+        AppTextField(_areaTreatmentController, 'Area Treatment', Icons.eco, isOptional: true),
+        AppTextField(_wlrTypeController, 'WLR Type', Icons.water, isOptional: true),
+        AppTextField(_serialNumberController, 'Serial Number', Icons.fingerprint, isOptional: true),
+        AppTextField(_waypointNumberController, 'Waypoint Number', Icons.location_on, inputType: TextInputType.number),
+        AppTextField(_rtkElevationController, 'RTK Elevation (NAVD88 m)', Icons.height, inputType: TextInputType.number),
+        AppTextField(_waterAboveBelowController, 'Water Above/Below NUT (m)', Icons.water, inputType: TextInputType.number, isOptional: true),
+        AppTextField(_wellRimToWaterController, 'Well Rim to Water (m)', Icons.water, inputType: TextInputType.number, isOptional: true),
+        AppTextField(_wellRimToMarshController, 'Well Rim to Marsh (m)', Icons.water, inputType: TextInputType.number, isOptional: true),
       ],
     );
   }
@@ -1417,168 +1018,14 @@ class _FormScreenState extends ConsumerState<FormScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _buildSectionHeader('Elevation Point Information'),
-        _buildTextField(_transectIdController, 'Transect ID', Icons.timeline),
-        _buildTextField(_pointNumberController, 'Point Number', Icons.numbers, inputType: TextInputType.number),
-        _buildTextField(_latitudeController, 'Latitude', Icons.location_on, inputType: TextInputType.number),
-        _buildTextField(_longitudeController, 'Longitude', Icons.location_on, inputType: TextInputType.number),
-        _buildTextField(_elevationNavd88Controller, 'Elevation (NAVD88 m)', Icons.landscape, inputType: TextInputType.number),
-        _buildTextField(_featureTypeController, 'Feature Type', Icons.landscape, isOptional: true),
+        const SectionHeader('Elevation Point Information'),
+        AppTextField(_transectIdController, 'Transect ID', Icons.timeline),
+        AppTextField(_pointNumberController, 'Point Number', Icons.numbers, inputType: TextInputType.number),
+        AppTextField(_latitudeController, 'Latitude', Icons.location_on, inputType: TextInputType.number),
+        AppTextField(_longitudeController, 'Longitude', Icons.location_on, inputType: TextInputType.number),
+        AppTextField(_elevationNavd88Controller, 'Elevation (NAVD88 m)', Icons.landscape, inputType: TextInputType.number),
+        AppTextField(_featureTypeController, 'Feature Type', Icons.landscape, isOptional: true),
       ],
-    );
-  }
-
-  Widget _buildVisibilitySelector() {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Visibility', style: TextStyle(fontWeight: FontWeight.w500)),
-          const SizedBox(height: 8),
-          SegmentedButton<String>(
-            segments: const [
-              ButtonSegment(value: 'public', label: Text('Public'), icon: Icon(Icons.public, size: 16)),
-              ButtonSegment(value: 'private', label: Text('Private'), icon: Icon(Icons.lock, size: 16)),
-              ButtonSegment(value: 'embargo', label: Text('Embargo'), icon: Icon(Icons.schedule, size: 16)),
-            ],
-            selected: {_visibility},
-            onSelectionChanged: (v) => setState(() {
-              _visibility = v.first;
-              if (_visibility != 'embargo') _embargoUntil = null;
-            }),
-          ),
-          if (_visibility == 'embargo') ...[
-            const SizedBox(height: 12),
-            OutlinedButton.icon(
-              icon: const Icon(Icons.calendar_today, size: 16),
-              label: Text(_embargoUntil != null
-                  ? 'Embargo until: $_embargoUntil'
-                  : 'Pick embargo date'),
-              onPressed: () async {
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: DateTime.now().add(const Duration(days: 90)),
-                  firstDate: DateTime.now(),
-                  lastDate: DateTime.now().add(const Duration(days: 3650)),
-                );
-                if (picked != null && mounted) {
-                  setState(() => _embargoUntil = picked.toIso8601String().substring(0, 10));
-                }
-              },
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 16, bottom: 12),
-      child: Text(
-        title,
-        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-          color: Colors.green[700],
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildReadOnlyField(String label, String value, IconData icon) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-        decoration: BoxDecoration(
-          border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.5)),
-          borderRadius: BorderRadius.circular(4),
-          color: theme.colorScheme.surfaceContainerHighest,
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: theme.colorScheme.onSurfaceVariant),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    label,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(value, style: theme.textTheme.bodyLarge),
-                ],
-              ),
-            ),
-            Icon(Icons.lock_outline, size: 14, color: theme.colorScheme.onSurfaceVariant),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTextField(
-    TextEditingController controller,
-    String label,
-    IconData icon, {
-    TextInputType inputType = TextInputType.text,
-    int maxLines = 1,
-    bool isOptional = false,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: TextFormField(
-        controller: controller,
-        decoration: InputDecoration(
-          labelText: label,
-          border: OutlineInputBorder(),
-          prefixIcon: Icon(icon),
-        ),
-        keyboardType: inputType,
-        maxLines: maxLines,
-        validator: (value) {
-          if (!isOptional && (value == null || value.isEmpty)) {
-            if (label.contains('Crew Leader') || label.contains('Site Name')) {
-              return 'This field is required';
-            }
-          }
-          return null;
-        },
-      ),
-    );
-  }
-
-  Widget _buildTimeField(
-    TextEditingController controller,
-    String label,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: TextFormField(
-        controller: controller,
-        decoration: InputDecoration(
-          labelText: label,
-          border: OutlineInputBorder(),
-          prefixIcon: Icon(Icons.access_time),
-        ),
-        readOnly: true,
-        onTap: () async {
-          final time = await showTimePicker(
-            context: context,
-            initialTime: TimeOfDay.now(),
-          );
-          if (time != null && mounted) {
-            controller.text = time.format(context);
-          }
-        },
-      ),
     );
   }
 
@@ -1932,349 +1379,5 @@ class _FormScreenState extends ConsumerState<FormScreen>
         );
       }
     }
-  }
-}
-
-class _SpeciesInput extends StatefulWidget {
-  final PlotData plot;
-  final List<SpeciesItem> allSpecies;
-  final VoidCallback onChanged;
-  final int coverIncrement;
-  final List<String> pinnedCodes;
-
-  const _SpeciesInput({
-    required this.plot,
-    required this.allSpecies,
-    required this.onChanged,
-    this.coverIncrement = 1,
-    this.pinnedCodes = const ['SPALT', 'SPPAT', 'BARE', 'DEAD'],
-  });
-
-  @override
-  State<_SpeciesInput> createState() => _SpeciesInputState();
-}
-
-class _SpeciesInputState extends State<_SpeciesInput> {
-  static const _pinnedLabels = {
-    'SPALT': 'Smooth Cordgrass',
-    'SPPAT': 'Salt Meadow Cordgrass',
-    'BARE': 'Bare Ground',
-    'DEAD': 'Dead Vegetation',
-  };
-
-  final _searchController = TextEditingController();
-  String _searchQuery = '';
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  List<SpeciesItem> _filteredSpecies() {
-    final q = _searchQuery.toLowerCase().trim();
-    if (q.isEmpty) return [];
-
-    final addedCodes = widget.plot.species.map((s) => s.speciesCode).toSet();
-
-    return widget.allSpecies.where((s) {
-      if (widget.pinnedCodes.contains(s.code)) return false;
-      if (addedCodes.contains(s.code)) return false;
-      final haystack = '${s.label.toLowerCase()} ${s.scientificName.toLowerCase()}';
-      return s.code.toLowerCase().contains(q) || haystack.contains(q);
-    }).toList()
-      ..sort((a, b) {
-        final aStarts = a.code.toLowerCase().startsWith(q) ? 0 : 1;
-        final bStarts = b.code.toLowerCase().startsWith(q) ? 0 : 1;
-        return aStarts.compareTo(bStarts);
-      });
-  }
-
-  void _updatePinned(String code, String rawValue) {
-    final percent = int.tryParse(rawValue);
-    final plot = widget.plot;
-    setState(() {
-      plot.species.removeWhere((s) => s.speciesCode == code);
-      if (percent != null && percent > 0) {
-        plot.species.add(PlotSpeciesEntry(
-          speciesCode: code,
-          percentageCover: percent.clamp(0, 100),
-        ));
-      }
-    });
-    widget.onChanged();
-  }
-
-  void _addExtra(SpeciesItem species) {
-    final plot = widget.plot;
-    if (plot.species.any((s) => s.speciesCode == species.code)) return;
-    setState(() {
-      plot.species.add(PlotSpeciesEntry(speciesCode: species.code, percentageCover: 0));
-      plot.extraControllers[species.code] = TextEditingController(text: '');
-      _searchController.clear();
-      _searchQuery = '';
-    });
-    widget.onChanged();
-  }
-
-  void _removeExtra(String code) {
-    final plot = widget.plot;
-    setState(() {
-      plot.species.removeWhere((s) => s.speciesCode == code);
-      plot.extraControllers[code]?.dispose();
-      plot.extraControllers.remove(code);
-    });
-    widget.onChanged();
-  }
-
-  void _updateExtra(String code, String rawValue) {
-    final percent = int.tryParse(rawValue);
-    final plot = widget.plot;
-    final idx = plot.species.indexWhere((s) => s.speciesCode == code);
-    if (idx < 0 || percent == null) return;
-    setState(() {
-      plot.species[idx] = PlotSpeciesEntry(
-        speciesCode: code,
-        percentageCover: percent.clamp(0, 100),
-      );
-    });
-    widget.onChanged();
-  }
-
-  Widget _speciesLabel(BuildContext context, String code, String commonLabel, String scientificName) {
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(commonLabel, style: theme.textTheme.bodyMedium),
-        Text(
-          scientificName,
-          style: theme.textTheme.bodySmall?.copyWith(
-            fontStyle: FontStyle.italic,
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ],
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final plot = widget.plot;
-    final extraSpecies = plot.species
-        .where((s) => !widget.pinnedCodes.contains(s.speciesCode))
-        .toList();
-    final filtered = _filteredSpecies();
-
-    // Build a lookup map for extra species scientific names
-    final speciesMap = {for (final s in widget.allSpecies) s.code: s};
-
-    // Helper: builds a cover input — TextField for increment=1, ChoiceChips otherwise
-    Widget buildCoverInput({
-      required String code,
-      required TextEditingController? controller,
-      required int currentValue,
-      required void Function(String) onChanged,
-    }) {
-      if (widget.coverIncrement == 1) {
-        return SizedBox(
-          width: 64,
-          child: TextField(
-            controller: controller,
-            keyboardType: TextInputType.number,
-            textAlign: TextAlign.center,
-            decoration: const InputDecoration(
-              suffixText: '%',
-              border: OutlineInputBorder(),
-              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              isDense: true,
-            ),
-            onChanged: onChanged,
-          ),
-        );
-      }
-      return Wrap(
-        spacing: 4,
-        runSpacing: 4,
-        children: List.generate(11, (i) {
-          final v = i * 10;
-          return ChoiceChip(
-            label: Text('$v', style: const TextStyle(fontSize: 11)),
-            selected: currentValue == v,
-            onSelected: (_) => onChanged(v.toString()),
-            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            visualDensity: VisualDensity.compact,
-            padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 0),
-          );
-        }),
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Header
-        Text(
-          'Species in this Plot (${plot.species.length})',
-          style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 12),
-
-        // Pinned species rows (always shown in fixed order)
-        ...widget.pinnedCodes.map((code) {
-          // .commonName, not .label - label already has "CODE - " baked in,
-          // and the row below prepends code again, showing it twice
-          final commonName = speciesMap[code]?.commonName ?? _pinnedLabels[code];
-          final commonLabel = commonName ?? code;
-          final scientificName = speciesMap[code]?.scientificName ?? '';
-          final controller = plot.pinnedControllers[code];
-          final currentValue = plot.species
-              .firstWhere((s) => s.speciesCode == code,
-                  orElse: () => PlotSpeciesEntry(speciesCode: code, percentageCover: 0))
-              .percentageCover;
-          if (widget.coverIncrement == 1) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: _speciesLabel(context, code, '$code \u2013 $commonLabel', scientificName),
-                  ),
-                  buildCoverInput(
-                    code: code,
-                    controller: controller,
-                    currentValue: currentValue,
-                    onChanged: (v) => _updatePinned(code, v),
-                  ),
-                ],
-              ),
-            );
-          }
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _speciesLabel(context, code, '$code \u2013 $commonLabel', scientificName),
-                const SizedBox(height: 4),
-                buildCoverInput(
-                  code: code,
-                  controller: controller,
-                  currentValue: currentValue,
-                  onChanged: (v) => _updatePinned(code, v),
-                ),
-              ],
-            ),
-          );
-        }),
-
-        // Extra (non-pinned) added species
-        if (extraSpecies.isNotEmpty) ...[
-          const Divider(height: 20),
-          ...extraSpecies.map((obs) {
-            final code = obs.speciesCode;
-            final item = speciesMap[code];
-            final commonLabel = item?.label ?? code;
-            final scientificName = item?.scientificName ?? '';
-            final controller = plot.extraControllers[code] ??
-                TextEditingController(text: obs.percentageCover.toString());
-            if (widget.coverIncrement == 1) {
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Expanded(child: _speciesLabel(context, code, commonLabel, scientificName)),
-                    buildCoverInput(
-                      code: code,
-                      controller: controller,
-                      currentValue: obs.percentageCover,
-                      onChanged: (v) => _updateExtra(code, v),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close, size: 18, color: Colors.red),
-                      padding: EdgeInsets.zero,
-                      onPressed: () => _removeExtra(code),
-                    ),
-                  ],
-                ),
-              );
-            }
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(child: _speciesLabel(context, code, commonLabel, scientificName)),
-                      IconButton(
-                        icon: const Icon(Icons.close, size: 18, color: Colors.red),
-                        padding: EdgeInsets.zero,
-                        onPressed: () => _removeExtra(code),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  buildCoverInput(
-                    code: code,
-                    controller: controller,
-                    currentValue: obs.percentageCover,
-                    onChanged: (v) => _updateExtra(code, v),
-                  ),
-                ],
-              ),
-            );
-          }),
-        ],
-
-        // Search field
-        const SizedBox(height: 12),
-        TextField(
-          controller: _searchController,
-          decoration: const InputDecoration(
-            prefixIcon: Icon(Icons.search, size: 20),
-            hintText: 'Search to add more species...',
-            border: OutlineInputBorder(),
-            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            isDense: true,
-          ),
-          onChanged: (v) => setState(() => _searchQuery = v),
-        ),
-
-        // Search results
-        if (filtered.isNotEmpty)
-          Container(
-            margin: const EdgeInsets.only(top: 4),
-            decoration: BoxDecoration(
-              border: Border.all(color: theme.colorScheme.outline),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            constraints: const BoxConstraints(maxHeight: 220),
-            child: ListView.separated(
-              shrinkWrap: true,
-              padding: EdgeInsets.zero,
-              itemCount: filtered.length,
-              separatorBuilder: (_, _) => const Divider(height: 1),
-              itemBuilder: (context, i) {
-                final s = filtered[i];
-                return ListTile(
-                  dense: true,
-                  title: Text(s.label, style: theme.textTheme.bodyMedium),
-                  subtitle: Text(
-                    s.scientificName,
-                    style: theme.textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
-                  ),
-                  trailing: const Icon(Icons.add, size: 18),
-                  onTap: () => _addExtra(s),
-                );
-              },
-            ),
-          ),
-      ],
-    );
   }
 }

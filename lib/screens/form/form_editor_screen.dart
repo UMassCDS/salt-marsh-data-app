@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:mass_marsh_app/screens/field_editor_dialog.dart';
+import 'package:mass_marsh_app/screens/form/field_editor_dialog.dart';
 
 class FormEditorScreen extends ConsumerStatefulWidget {
   final int orgId;
