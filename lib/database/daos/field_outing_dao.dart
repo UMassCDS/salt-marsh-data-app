@@ -146,24 +146,6 @@ class FieldOutingDao {
     );
   }
 
-  /// Mark outing as synced (update with server ID)
-  Future<void> markSynced(
-    String localId, {
-    required int serverId,
-  }) async {
-    await db.update(
-      'field_outings',
-      {
-        'id': serverId,
-        'sync_status': 'synced',
-        'is_draft': 0,
-        'updated_at': DateTime.now().toIso8601String(),
-      },
-      where: 'local_id = ?',
-      whereArgs: [localId],
-    );
-  }
-
   /// Delete field outing (and cascade to all related records)
   Future<void> deleteFieldOuting(int id) async {
     await db.delete(
