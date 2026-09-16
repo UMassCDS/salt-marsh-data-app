@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
+import '../services/sync_service.dart';
 import 'db_schema.dart';
 import 'daos/field_outing_dao.dart';
 // import 'daos/form_config_dao.dart';
@@ -389,23 +390,31 @@ class AppDatabase {
     final dbPath = await getDatabasesPath();
     final dbFile = File(join(dbPath, _dbName));
 
-    // Ensure database is closed before copying
-    await _database?.close();
-    _database = null;
+    // Auto-sync and background sync both open their own queries against this
+    // database - paused around the close/reopen below so they can't hit a
+    // "database has been closed" error mid-export
+    SyncService.instance.stopAutoSync();
+    try {
+      // Ensure database is closed before copying
+      await _database?.close();
+      _database = null;
 
-    final exportDir = await getApplicationDocumentsDirectory();
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final exportPath = join(
-      exportDir.path,
-      'mass_marsh_export_$timestamp.db',
-    );
+      final exportDir = await getApplicationDocumentsDirectory();
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final exportPath = join(
+        exportDir.path,
+        'mass_marsh_export_$timestamp.db',
+      );
 
-    final exportedFile = await dbFile.copy(exportPath);
+      final exportedFile = await dbFile.copy(exportPath);
 
-    // Reopen database
-    await database;
+      // Reopen database
+      await database;
 
-    return exportedFile;
+      return exportedFile;
+    } finally {
+      SyncService.instance.startAutoSync();
+    }
   }
 
   /// Import a database file, replacing the current database.
@@ -428,20 +437,25 @@ class AppDatabase {
     final dbPath = await getDatabasesPath();
     final targetPath = join(dbPath, _dbName);
 
-    // Close existing database
-    await _database?.close();
-    _database = null;
+    SyncService.instance.stopAutoSync();
+    try {
+      // Close existing database
+      await _database?.close();
+      _database = null;
 
-    // Copy imported file to database location
-    final importFile = File(importPath);
-    if (!await importFile.exists()) {
-      throw Exception('Import file does not exist: $importPath');
+      // Copy imported file to database location
+      final importFile = File(importPath);
+      if (!await importFile.exists()) {
+        throw Exception('Import file does not exist: $importPath');
+      }
+
+      await importFile.copy(targetPath);
+
+      // Reopen database to validate
+      await database;
+    } finally {
+      SyncService.instance.startAutoSync();
     }
-
-    await importFile.copy(targetPath);
-
-    // Reopen database to validate
-    await database;
   }
 
   /// Get the current database file path.
