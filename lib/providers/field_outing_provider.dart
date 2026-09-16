@@ -181,13 +181,18 @@ class FieldOutingService {
   }
 
   // Matches child rows on local_id rather than delete-then-reinsert, which
-  // would wipe server_id and orphan anything already uploaded
+  // would wipe server_id and orphan anything already uploaded.
+  // isDraft: false finalizes the draft in place - used when ending a
+  // session, replacing what used to be a separate deleteDraft() followed by
+  // a fresh insert, which could lose the draft entirely with nothing to
+  // replace it if the process died between those two steps.
   Future<void> updateDraftWithChildren(
     int draftId,
     FieldOuting session,
     List<Map<String, dynamic>> childRecords,
-    String childTable,
-  ) async {
+    String childTable, {
+    bool isDraft = true,
+  }) async {
     final db = await ref.read(appDatabaseProvider.future);
     final database = await db.database;
 
@@ -201,6 +206,7 @@ class FieldOutingService {
           'end_time': session.endTime?.toIso8601String(),
           'visibility': session.visibility,
           'embargo_until': session.embargoUntil,
+          'is_draft': isDraft ? 1 : 0,
           'updated_at': DateTime.now().toIso8601String(),
         },
         where: 'id = ?',
@@ -243,6 +249,14 @@ class FieldOutingService {
     });
 
     _refreshNotifier.increment();
+
+    if (!isDraft) {
+      SyncService.instance.uploadFieldOuting(draftId).then((serverId) {
+        if (serverId != null) {
+          _refreshNotifier.increment();
+        }
+      }).catchError((_) {});
+    }
   }
 
   Future<void> updateFieldOuting(FieldOuting session) async {

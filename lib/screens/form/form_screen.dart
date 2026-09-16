@@ -1220,14 +1220,6 @@ class _FormScreenState extends ConsumerState<FormScreen>
     }
 
     try {
-      // If this session was saved as a draft, remove the draft row before
-      // creating the final outing.
-      if (_currentDraftId != null) {
-        final service = ref.read(fieldOutingServiceProvider);
-        await service.deleteDraft(_currentDraftId!);
-        _currentDraftId = null;
-      }
-
       // Parse start and end times
       final startTime = _parseTimeString(_startTimeController.text);
       final endTime = _parseTimeString(_endTimeController.text);
@@ -1254,13 +1246,21 @@ class _FormScreenState extends ConsumerState<FormScreen>
 
       final snapshot = _buildSnapshot();
       final childTable = snapshot.childTable;
-      if (childTable != null) {
+      if (_currentDraftId != null && childTable != null) {
+        // Finalizes the existing draft row in place (one transaction) rather
+        // than deleting it and creating a new one - a process death between
+        // those two steps used to be able to lose the session entirely
+        await service.updateDraftWithChildren(
+            _currentDraftId!, outing, snapshot.toChildRows(), childTable,
+            isDraft: false);
+      } else if (childTable != null) {
         await service.saveFieldOutingWithChildren(
             outing, snapshot.toChildRows(), childTable);
       } else {
         await service.saveFieldOuting(outing);
       }
 
+      _currentDraftId = null;
       _markClean();
 
       if (mounted) {
