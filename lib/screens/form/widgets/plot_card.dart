@@ -3,6 +3,7 @@ import '../../../models/field_outing/plot_data.dart';
 import '../../../services/protocol_service.dart';
 import '../../../services/species_service.dart';
 import '../../../utils/photo_viewer.dart';
+import 'plot_text_field.dart';
 import 'species_cover_input.dart';
 
 class CollapsedPlotSummary extends StatelessWidget {
@@ -113,71 +114,6 @@ class PlotCard extends StatelessWidget {
     required this.onSpeciesChanged,
   });
 
-  Widget _plotTextField(
-    BuildContext context,
-    String field,
-    String currentValue,
-    String label,
-    IconData icon, {
-    bool isNumber = false,
-    bool isDropdown = false,
-    bool isOptional = false,
-    int maxLines = 1,
-    List<String>? dropdownOptions,
-    TextEditingController? controller,
-  }) {
-    if (isDropdown && dropdownOptions != null) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: DropdownButtonFormField<String>(
-          initialValue: currentValue.isEmpty ? null : currentValue,
-          items: dropdownOptions.map((option) {
-            return DropdownMenuItem(
-              value: option,
-              child: Text(option),
-            );
-          }).toList(),
-          onChanged: (value) {
-            if (value != null) onFieldChanged(field, value);
-          },
-          decoration: InputDecoration(
-            labelText: label,
-            border: const OutlineInputBorder(),
-            prefixIcon: Icon(icon),
-          ),
-          validator: (value) {
-            if (!isOptional && (value == null || value.isEmpty)) {
-              return 'This field is required';
-            }
-            return null;
-          },
-        ),
-      );
-    }
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: TextFormField(
-        controller: controller,
-        initialValue: controller != null ? null : currentValue,
-        decoration: InputDecoration(
-          labelText: label,
-          border: const OutlineInputBorder(),
-          prefixIcon: Icon(icon),
-        ),
-        keyboardType: isNumber ? TextInputType.number : TextInputType.text,
-        maxLines: maxLines,
-        onChanged: (value) => onFieldChanged(field, value),
-        validator: (value) {
-          if (!isOptional && (value == null || value.isEmpty)) {
-            return 'This field is required';
-          }
-          return null;
-        },
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -218,58 +154,58 @@ class PlotCard extends StatelessWidget {
 
             // Plot fields — conditional per protocol
             if (!(activeProtocol?.isFieldHidden('transect_id') ?? false))
-              _plotTextField(
-                context,
-                'transectId',
-                plot.transectId,
-                'Transect ID',
-                Icons.timeline,
+              PlotTextField(
+                field: 'transectId',
+                currentValue: plot.transectId,
+                label: 'Transect ID',
+                icon: Icons.timeline,
+                onChanged: onFieldChanged,
               ),
-            _plotTextField(
-              context,
-              'plotId',
-              '',
-              'Plot ID (e.g. CB_T1_P1)',
-              Icons.tag,
+            PlotTextField(
+              field: 'plotId',
+              currentValue: '',
+              label: 'Plot ID (e.g. CB_T1_P1)',
+              icon: Icons.tag,
               isOptional: true,
               controller: plot.plotIdController,
+              onChanged: onFieldChanged,
             ),
             if (!(activeProtocol?.isFieldHidden('habitat_type') ?? false))
-              _plotTextField(
-                context,
-                'habitatType',
-                plot.habitatType,
-                'Habitat Type',
-                Icons.terrain,
+              PlotTextField(
+                field: 'habitatType',
+                currentValue: plot.habitatType,
+                label: 'Habitat Type',
+                icon: Icons.terrain,
                 isDropdown: true,
                 dropdownOptions: kHabitatOptions,
+                onChanged: onFieldChanged,
               ),
             if (!(activeProtocol?.isFieldHidden('distance_along_transect_m') ?? false))
-              _plotTextField(
-                context,
-                'distanceAlongTransect',
-                plot.distanceAlongTransect == 0 ? '' : plot.distanceAlongTransect.toString(),
-                'Distance Along Transect (m)',
-                Icons.straighten,
+              PlotTextField(
+                field: 'distanceAlongTransect',
+                currentValue: plot.distanceAlongTransect == 0 ? '' : plot.distanceAlongTransect.toString(),
+                label: 'Distance Along Transect (m)',
+                icon: Icons.straighten,
                 isNumber: true,
+                onChanged: onFieldChanged,
               ),
-            _plotTextField(
-              context,
-              'latitude',
-              '',
-              'Latitude',
-              Icons.location_on,
+            PlotTextField(
+              field: 'latitude',
+              currentValue: '',
+              label: 'Latitude',
+              icon: Icons.location_on,
               isNumber: true,
               controller: plot.latController,
+              onChanged: onFieldChanged,
             ),
-            _plotTextField(
-              context,
-              'longitude',
-              '',
-              'Longitude',
-              Icons.location_on,
+            PlotTextField(
+              field: 'longitude',
+              currentValue: '',
+              label: 'Longitude',
+              icon: Icons.location_on,
               isNumber: true,
               controller: plot.lngController,
+              onChanged: onFieldChanged,
             ),
 
             // GPS Button
@@ -287,32 +223,32 @@ class PlotCard extends StatelessWidget {
             ),
 
             if (!(activeProtocol?.isFieldHidden('canopy_height_m') ?? false))
-              _plotTextField(
-                context,
-                'canopyHeight',
-                plot.canopyHeight == 0 ? '' : plot.canopyHeight.toString(),
-                'Canopy Height (m)',
-                Icons.height,
+              PlotTextField(
+                field: 'canopyHeight',
+                currentValue: plot.canopyHeight == 0 ? '' : plot.canopyHeight.toString(),
+                label: 'Canopy Height (m)',
+                icon: Icons.height,
                 isNumber: true,
+                onChanged: onFieldChanged,
               ),
             if (!(activeProtocol?.isFieldHidden('thatch_height_m') ?? false))
-              _plotTextField(
-                context,
-                'thatchHeight',
-                plot.thatchHeight == 0 ? '' : plot.thatchHeight.toString(),
-                'Thatch Height (m)',
-                Icons.height,
+              PlotTextField(
+                field: 'thatchHeight',
+                currentValue: plot.thatchHeight == 0 ? '' : plot.thatchHeight.toString(),
+                label: 'Thatch Height (m)',
+                icon: Icons.height,
                 isNumber: true,
+                onChanged: onFieldChanged,
               ),
             if (!(activeProtocol?.isFieldHidden('elevation_navd88_m') ?? false))
-              _plotTextField(
-                context,
-                'elevation',
-                plot.elevation?.toString() ?? '',
-                'Elevation (m)',
-                Icons.landscape,
+              PlotTextField(
+                field: 'elevation',
+                currentValue: plot.elevation?.toString() ?? '',
+                label: 'Elevation (m)',
+                icon: Icons.landscape,
                 isNumber: true,
                 isOptional: true,
+                onChanged: onFieldChanged,
               ),
 
             // UASCommunity extra fields
@@ -351,14 +287,14 @@ class PlotCard extends StatelessWidget {
                 ),
               ),
 
-            _plotTextField(
-              context,
-              'notes',
-              plot.notes ?? '',
-              'Notes',
-              Icons.note,
+            PlotTextField(
+              field: 'notes',
+              currentValue: plot.notes ?? '',
+              label: 'Notes',
+              icon: Icons.note,
               maxLines: 2,
               isOptional: true,
+              onChanged: onFieldChanged,
             ),
 
             const SizedBox(height: 16),
