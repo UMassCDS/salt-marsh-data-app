@@ -42,7 +42,7 @@ void main() {
   }
 
   // Draw a thin divider between each icon
-  // (optional — canvas is already clear)
+  // (optional - canvas is already clear)
 
   final bytes = img.encodePng(canvas);
   File('assets/icon_preview.png').writeAsBytesSync(bytes);

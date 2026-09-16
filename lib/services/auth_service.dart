@@ -32,7 +32,7 @@ class AuthService {
     return (token: token, user: user);
   }
 
-  /// GET /api/v1/auth/me — validates a stored token and returns the current user.
+  /// GET /api/v1/auth/me - validates a stored token and returns the current user.
   /// refreshedToken is set when the server renewed the token on this request.
   Future<({User user, String? refreshedToken})> getMe(String token) async {
     final response = await _dio.get(

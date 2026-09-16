@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:native_exif/native_exif.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
 import '../../models/field_outing/draft_snapshot.dart';
 import '../../models/field_outing/field_outing.dart';
@@ -20,7 +17,9 @@ import '../../services/species_service.dart';
 import '../../services/protocol_service.dart';
 import '../../utils/gps_quality.dart';
 import '../../utils/id_utils.dart';
+import '../../utils/photo_storage.dart';
 import '../../utils/snackbar_utils.dart';
+import '../../utils/time_format.dart';
 import 'widgets/action_bar.dart';
 import 'widgets/common_fields.dart';
 import 'widgets/monitoring_forms.dart';
@@ -380,47 +379,13 @@ class _FormScreenState extends ConsumerState<FormScreen>
         );
 
         setState(() {
-          _plots = vegRecords.map((record) {
-            List<PlotSpeciesEntry> species = [];
-            if (record['species_observations'] != null) {
-              final speciesJson = jsonDecode(record['species_observations'] as String) as List;
-              species = speciesJson.map((s) => PlotSpeciesEntry(
-                speciesCode: s['species_code'] as String,
-                percentageCover: s['percentage_cover'] as int,
-              )).toList();
-            }
-
-            // photoPath alone isn't enough - the thumbnail renders off
-            // photoFile, which a freshly loaded draft never had a chance to set
-            final photoPath = record['photo_local_path'] as String?;
-            final photoFile = photoPath != null && File(photoPath).existsSync()
-                ? File(photoPath)
-                : null;
-
-            return PlotData(
-              localId: record['local_id'] as String?,
-              transectId: record['transect_id'] as String? ?? '',
-              plotNumber: record['plot_number'] as int? ?? 1,
-              plotId: record['plot_id'] as String? ?? '',
-              plotIdManuallySet: (record['plot_id'] as String?)?.isNotEmpty ?? false,
-              habitatType: record['habitat_type'] as String? ?? '',
-              distanceAlongTransect: (record['distance_along_transect_m'] as num?)?.toDouble() ?? 0.0,
-              latitude: (record['latitude'] as num?)?.toDouble() ?? 0.0,
-              longitude: (record['longitude'] as num?)?.toDouble() ?? 0.0,
-              accuracyM: (record['accuracy_m'] as num?)?.toDouble(),
-              locationQuality: record['location_quality'] as String?,
-              canopyHeight: (record['canopy_height_m'] as num?)?.toDouble() ?? 0.0,
-              thatchHeight: (record['thatch_height_m'] as num?)?.toDouble() ?? 0.0,
-              elevation: (record['elevation_m'] as num?)?.toDouble(),
-              notes: record['notes'] as String?,
-              photoPath: photoPath,
-              photoFile: photoFile,
-              species: species,
-              subclass: record['subclass'] as String?,
-              rtkPointNumber: record['rtk_point_number'] as String?,
-              pinnedCodes: _activeProtocol?.speciesConfig.pinnedSpecies ?? const ['SPALT', 'SPPAT', 'BARE', 'DEAD'],
-            );
-          }).toList();
+          _plots = vegRecords
+              .map((record) => PlotData.fromDraftRow(
+                    record,
+                    pinnedCodes: _activeProtocol?.speciesConfig.pinnedSpecies ??
+                        const ['SPALT', 'SPPAT', 'BARE', 'DEAD'],
+                  ))
+              .toList();
           _expandedPlotLocalId = _plots.isEmpty ? null : _plots.last.localId;
         });
       } else if (widget.monitoringType == 'hydrology') {
@@ -493,7 +458,7 @@ class _FormScreenState extends ConsumerState<FormScreen>
         }
       }
 
-      // The freshly loaded draft is the saved state — start clean.
+      // The freshly loaded draft is the saved state - start clean.
       _markClean();
     } catch (e) {
       if (mounted) {
@@ -1020,18 +985,6 @@ class _FormScreenState extends ConsumerState<FormScreen>
     });
   }
 
-  /// Copies the picked image to the app's documents directory so the path
-  /// remains valid after iOS clears its temporary cache.
-  Future<String> _copyImageToPermanentStorage(String tempPath) async {
-    final docsDir = await getApplicationDocumentsDirectory();
-    final photosDir = Directory(p.join(docsDir.path, 'photos'));
-    if (!await photosDir.exists()) await photosDir.create(recursive: true);
-    final filename = '${DateTime.now().millisecondsSinceEpoch}${p.extension(tempPath)}';
-    final dest = p.join(photosDir.path, filename);
-    await File(tempPath).copy(dest);
-    return dest;
-  }
-
   // Redundant with the coordinates already saved on the plot record, but a
   // photo that carries its own location survives even if that record is lost
   Future<void> _stampPhotoLocation(String path, int plotIndex) async {
@@ -1090,7 +1043,7 @@ class _FormScreenState extends ConsumerState<FormScreen>
         source: ImageSource.camera,
       );
       if (image != null && mounted) {
-        final permanentPath = await _copyImageToPermanentStorage(image.path);
+        final permanentPath = await copyImageToPermanentStorage(image.path);
         // Awaited and run before the photo is ever displayed - native EXIF
         // writes rewrite the whole file in place, and racing that against
         // a concurrent Image.file decode of the same path is what was
@@ -1121,7 +1074,7 @@ class _FormScreenState extends ConsumerState<FormScreen>
         source: ImageSource.gallery,
       );
       if (image != null && mounted) {
-        final permanentPath = await _copyImageToPermanentStorage(image.path);
+        final permanentPath = await copyImageToPermanentStorage(image.path);
         setState(() {
           _plots[plotIndex].photoFile = File(permanentPath);
           _plots[plotIndex].photoPath = permanentPath;
@@ -1138,46 +1091,14 @@ class _FormScreenState extends ConsumerState<FormScreen>
     }
   }
 
-  DateTime? _parseTimeString(String timeStr) {
-    if (timeStr.isEmpty) return null;
-
-    try {
-      final now = DateTime.now();
-      // Handle 12-hour format with AM/PM (e.g., "3:51 PM" or "3:51PM")
-      final cleanTime = timeStr.replaceAll(' ', '').toUpperCase();
-      final isPM = cleanTime.contains('PM');
-      final isAM = cleanTime.contains('AM');
-
-      // Remove AM/PM
-      final timePart = cleanTime.replaceAll('PM', '').replaceAll('AM', '');
-      final parts = timePart.split(':');
-
-      if (parts.length != 2) return null;
-
-      int hour = int.parse(parts[0]);
-      final minute = int.parse(parts[1]);
-
-      // Convert to 24-hour format
-      if (isPM && hour != 12) {
-        hour += 12;
-      } else if (isAM && hour == 12) {
-        hour = 0;
-      }
-
-      return DateTime(now.year, now.month, now.day, hour, minute);
-    } catch (e) {
-      return null;
-    }
-  }
-
   // Must never await, so it stays valid even mid-teardown
   ({FieldOuting outing, String? childTable, List<Map<String, dynamic>> rows})
       _captureDraft() {
     final startTime = _startTimeController.text.isNotEmpty
-        ? _parseTimeString(_startTimeController.text)
+        ? parseTimeString(_startTimeController.text)
         : null;
     final endTime = _endTimeController.text.isNotEmpty
-        ? _parseTimeString(_endTimeController.text)
+        ? parseTimeString(_endTimeController.text)
         : null;
 
     final outing = FieldOuting(
@@ -1313,8 +1234,8 @@ class _FormScreenState extends ConsumerState<FormScreen>
 
     try {
       // Parse start and end times
-      final startTime = _parseTimeString(_startTimeController.text);
-      final endTime = _parseTimeString(_endTimeController.text);
+      final startTime = parseTimeString(_startTimeController.text);
+      final endTime = parseTimeString(_endTimeController.text);
 
       // Create the field outing object
       final outing = FieldOuting(

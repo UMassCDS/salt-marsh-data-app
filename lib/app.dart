@@ -6,12 +6,12 @@ import 'providers/theme_provider.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/form/form_screen.dart';
-import 'screens/outings_screen.dart';
-import 'screens/drafts_screen.dart';
+import 'screens/outings/outings_screen.dart';
+import 'screens/outings/drafts_screen.dart';
 import 'screens/org_selection_screen.dart';
 import 'screens/settings/settings_screen.dart';
 
-/// Seed colour — a rich marsh-green used to generate the full M3 palette.
+/// Seed colour - a rich marsh-green used to generate the full M3 palette.
 const _kSeedColor = Color(0xFF1B6B3A);
 
 ThemeData _buildTheme(Brightness brightness) {
@@ -24,7 +24,7 @@ ThemeData _buildTheme(Brightness brightness) {
     colorScheme: colorScheme,
     useMaterial3: true,
 
-    // AppBar — flush with the surface, no elevation line while scrolling
+    // AppBar - flush with the surface, no elevation line while scrolling
     appBarTheme: AppBarTheme(
       centerTitle: true,
       elevation: 0,
@@ -39,7 +39,7 @@ ThemeData _buildTheme(Brightness brightness) {
       ),
     ),
 
-    // Cards — outlined, no shadow (cleaner look)
+    // Cards - outlined, no shadow (cleaner look)
     cardTheme: CardThemeData(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -52,7 +52,7 @@ ThemeData _buildTheme(Brightness brightness) {
       color: colorScheme.surface,
     ),
 
-    // Input fields — filled style, rounded corners
+    // Input fields - filled style, rounded corners
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),

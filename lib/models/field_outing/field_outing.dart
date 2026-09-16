@@ -18,7 +18,7 @@ class FieldOuting {
   DateTime? approvedAt;
   String? rejectionReason;
   bool isDraft;
-  String? visibility; // public, private, embargo — null falls back to org default
+  String? visibility; // public, private, embargo - null falls back to org default
   String? embargoUntil; // ISO date string, only used when visibility == 'embargo'
   DateTime? createdAt;
   DateTime? updatedAt;

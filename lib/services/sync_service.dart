@@ -871,7 +871,7 @@ class SyncService {
           results.contains(ConnectivityResult.wifi) ||
           results.contains(ConnectivityResult.ethernet);
       if (isOnline) {
-        _logger.i('Connectivity restored — retrying pending uploads');
+        _logger.i('Connectivity restored - retrying pending uploads');
         uploadAllPendingOutings();
       }
     });

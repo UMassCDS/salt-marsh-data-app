@@ -227,7 +227,7 @@ class SpeciesCoverInputState extends State<SpeciesCoverInput> {
       borderSide: BorderSide(color: theme.colorScheme.outline, width: 1.5),
     );
 
-    // Helper: builds a cover input — TextField for increment=1, ChoiceChips otherwise
+    // Helper: builds a cover input - TextField for increment=1, ChoiceChips otherwise
     Widget buildCoverInput({
       required String code,
       required TextEditingController? controller,
