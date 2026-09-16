@@ -47,7 +47,7 @@ class FormTemplateDAO {
 
   /// Insert a new form template
   Future<int> insertTemplate(FormTemplate template) async {
-    return await _db.insert(
+    return _db.insert(
       'form_templates',
       {
         'template_code': template.templateCode,
@@ -63,7 +63,7 @@ class FormTemplateDAO {
 
   /// Update an existing template
   Future<int> updateTemplate(FormTemplate template) async {
-    return await _db.update(
+    return _db.update(
       'form_templates',
       {
         'template_name': template.templateName,
@@ -79,7 +79,7 @@ class FormTemplateDAO {
 
   /// Soft delete a template (set is_active = 0)
   Future<int> deactivateTemplate(int templateId) async {
-    return await _db.update(
+    return _db.update(
       'form_templates',
       {'is_active': 0},
       where: 'id = ?',
@@ -140,7 +140,7 @@ class FormTemplateDAO {
     int templateId, {
     Map<String, dynamic>? customizations,
   }) async {
-    return await _db.insert(
+    return _db.insert(
       'org_form_templates',
       {
         'org_id': orgId,
@@ -155,7 +155,7 @@ class FormTemplateDAO {
 
   /// Disable a template for an organization
   Future<int> disableTemplateForOrg(int orgId, int templateId) async {
-    return await _db.update(
+    return _db.update(
       'org_form_templates',
       {'is_enabled': 0},
       where: 'org_id = ? AND template_id = ?',
@@ -169,7 +169,7 @@ class FormTemplateDAO {
     int templateId,
     Map<String, dynamic> customizations,
   ) async {
-    return await _db.update(
+    return _db.update(
       'org_form_templates',
       {'customizations_json': jsonEncode(customizations)},
       where: 'org_id = ? AND template_id = ?',

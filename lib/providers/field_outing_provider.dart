@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sqflite/sqflite.dart';
 import '../database/app_database.dart';
@@ -109,14 +110,14 @@ class FieldOutingService {
 
     if (result.isNotEmpty && !session.isDraft) {
       final dbId = result.first['id'] as int;
-      SyncService.instance.uploadFieldOuting(dbId).then((serverId) {
+      unawaited(SyncService.instance.uploadFieldOuting(dbId).then((serverId) {
         if (serverId != null) {
           // Refresh again to show sync status
           _refreshNotifier.increment();
         }
       }).catchError((error) {
         // Sync failed - record will stay as pending and retry later
-      });
+      }));
     }
 
     return localId;
@@ -155,11 +156,11 @@ class FieldOutingService {
     _refreshNotifier.increment();
 
     if (dbId != null && !session.isDraft) {
-      SyncService.instance.uploadFieldOuting(dbId!).then((serverId) {
+      unawaited(SyncService.instance.uploadFieldOuting(dbId!).then((serverId) {
         if (serverId != null) {
           _refreshNotifier.increment();
         }
-      }).catchError((_) {});
+      }).catchError((_) {}));
     }
 
     return localId;
@@ -181,13 +182,18 @@ class FieldOutingService {
   }
 
   // Matches child rows on local_id rather than delete-then-reinsert, which
-  // would wipe server_id and orphan anything already uploaded
+  // would wipe server_id and orphan anything already uploaded.
+  // isDraft: false finalizes the draft in place - used when ending a
+  // session, replacing what used to be a separate deleteDraft() followed by
+  // a fresh insert, which could lose the draft entirely with nothing to
+  // replace it if the process died between those two steps.
   Future<void> updateDraftWithChildren(
     int draftId,
     FieldOuting session,
     List<Map<String, dynamic>> childRecords,
-    String childTable,
-  ) async {
+    String childTable, {
+    bool isDraft = true,
+  }) async {
     final db = await ref.read(appDatabaseProvider.future);
     final database = await db.database;
 
@@ -201,6 +207,7 @@ class FieldOutingService {
           'end_time': session.endTime?.toIso8601String(),
           'visibility': session.visibility,
           'embargo_until': session.embargoUntil,
+          'is_draft': isDraft ? 1 : 0,
           'updated_at': DateTime.now().toIso8601String(),
         },
         where: 'id = ?',
@@ -243,6 +250,14 @@ class FieldOutingService {
     });
 
     _refreshNotifier.increment();
+
+    if (!isDraft) {
+      unawaited(SyncService.instance.uploadFieldOuting(draftId).then((serverId) {
+        if (serverId != null) {
+          _refreshNotifier.increment();
+        }
+      }).catchError((_) {}));
+    }
   }
 
   Future<void> updateFieldOuting(FieldOuting session) async {
@@ -286,7 +301,7 @@ class FieldOutingService {
     );
 
     appLogger.i('[drafts] query: userId=$userId orgId=$orgId -> ${result.length} row(s)');
-    return result.map((row) => FieldOuting.fromMap(row)).toList();
+    return result.map(FieldOuting.fromMap).toList();
   }
 
   // Same org/account scoping as getDrafts(), plus monitoring type, so
@@ -299,15 +314,16 @@ class FieldOutingService {
   Future<void> deleteDraft(int id) async {
     final db = await ref.read(appDatabaseProvider.future);
     final database = await db.database;
-    
-    // Delete child records first
-    await database.delete('vegetation_records', where: 'outing_id = ?', whereArgs: [id]);
-    await database.delete('hydrology_records', where: 'outing_id = ?', whereArgs: [id]);
-    await database.delete('elevation_records', where: 'outing_id = ?', whereArgs: [id]);
-    
-    // Delete the draft outing
-    await database.delete('field_outings', where: 'id = ?', whereArgs: [id]);
-    
+
+    // One transaction so an interruption partway through can't leave
+    // orphaned child rows behind after only some deletes committed
+    await database.transaction((txn) async {
+      await txn.delete('vegetation_records', where: 'outing_id = ?', whereArgs: [id]);
+      await txn.delete('hydrology_records', where: 'outing_id = ?', whereArgs: [id]);
+      await txn.delete('elevation_records', where: 'outing_id = ?', whereArgs: [id]);
+      await txn.delete('field_outings', where: 'id = ?', whereArgs: [id]);
+    });
+
     _refreshNotifier.increment();
   }
 

@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
+import '../services/sync_service.dart';
 import 'db_schema.dart';
 import 'daos/field_outing_dao.dart';
 // import 'daos/form_config_dao.dart';
@@ -107,7 +108,10 @@ class AppDatabase {
     await TemplateSeeds.seedOrganizations(db);
   }
 
-  /// Called when database version changes
+  /// Called when database version changes.
+  /// Keep the `if (oldVersion < N)` blocks below in ascending N order - they
+  /// run in source order, not numeric order, so a later migration assuming an
+  /// earlier one already ran would silently misbehave if these were reordered.
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     // Migration from version 1 to 2: Add server_id column to field_outings
     // Note: SQLite doesn't support UNIQUE constraint in ALTER TABLE, so we add it without UNIQUE
@@ -161,32 +165,6 @@ class AppDatabase {
       await db.execute('ALTER TABLE field_outings ADD COLUMN visibility TEXT');
       await db.execute('ALTER TABLE field_outings ADD COLUMN embargo_until TEXT');
     }
-    if (oldVersion < 7) {
-      // Add protocol_cache table
-      await db.execute('''
-        CREATE TABLE IF NOT EXISTS protocol_cache (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          org_id INTEGER NOT NULL UNIQUE,
-          protocol_code TEXT NOT NULL,
-          protocol_name TEXT NOT NULL,
-          definition_json TEXT NOT NULL,
-          cached_at TEXT DEFAULT (datetime('now'))
-        )
-      ''');
-      await db.execute(
-        'CREATE INDEX IF NOT EXISTS idx_protocol_cache_org ON protocol_cache(org_id)',
-      );
-      // Add protocol-specific columns to vegetation_records
-      await db.execute(
-        'ALTER TABLE vegetation_records ADD COLUMN protocol_code TEXT',
-      );
-      await db.execute(
-        'ALTER TABLE vegetation_records ADD COLUMN subclass TEXT',
-      );
-      await db.execute(
-        'ALTER TABLE vegetation_records ADD COLUMN rtk_point_number TEXT',
-      );
-    }
     if (oldVersion < 6) {
       // Drop kobo_id, kobo_uuid, and crew_leader columns.
       // SQLite requires a table rebuild to drop columns.
@@ -239,6 +217,32 @@ class AppDatabase {
       ''');
       await db.execute('DROP TABLE _field_outings_old');
       await db.execute('PRAGMA foreign_keys = ON');
+    }
+    if (oldVersion < 7) {
+      // Add protocol_cache table
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS protocol_cache (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          org_id INTEGER NOT NULL UNIQUE,
+          protocol_code TEXT NOT NULL,
+          protocol_name TEXT NOT NULL,
+          definition_json TEXT NOT NULL,
+          cached_at TEXT DEFAULT (datetime('now'))
+        )
+      ''');
+      await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_protocol_cache_org ON protocol_cache(org_id)',
+      );
+      // Add protocol-specific columns to vegetation_records
+      await db.execute(
+        'ALTER TABLE vegetation_records ADD COLUMN protocol_code TEXT',
+      );
+      await db.execute(
+        'ALTER TABLE vegetation_records ADD COLUMN subclass TEXT',
+      );
+      await db.execute(
+        'ALTER TABLE vegetation_records ADD COLUMN rtk_point_number TEXT',
+      );
     }
     if (oldVersion < 8) {
       // Separate from sync_status so a failed photo isn't indistinguishable from a synced one
@@ -386,23 +390,31 @@ class AppDatabase {
     final dbPath = await getDatabasesPath();
     final dbFile = File(join(dbPath, _dbName));
 
-    // Ensure database is closed before copying
-    await _database?.close();
-    _database = null;
+    // Auto-sync and background sync both open their own queries against this
+    // database - paused around the close/reopen below so they can't hit a
+    // "database has been closed" error mid-export
+    SyncService.instance.stopAutoSync();
+    try {
+      // Ensure database is closed before copying
+      await _database?.close();
+      _database = null;
 
-    final exportDir = await getApplicationDocumentsDirectory();
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final exportPath = join(
-      exportDir.path,
-      'mass_marsh_export_$timestamp.db',
-    );
+      final exportDir = await getApplicationDocumentsDirectory();
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final exportPath = join(
+        exportDir.path,
+        'mass_marsh_export_$timestamp.db',
+      );
 
-    final exportedFile = await dbFile.copy(exportPath);
+      final exportedFile = await dbFile.copy(exportPath);
 
-    // Reopen database
-    await database;
+      // Reopen database
+      await database;
 
-    return exportedFile;
+      return exportedFile;
+    } finally {
+      SyncService.instance.startAutoSync();
+    }
   }
 
   /// Import a database file, replacing the current database.
@@ -425,20 +437,25 @@ class AppDatabase {
     final dbPath = await getDatabasesPath();
     final targetPath = join(dbPath, _dbName);
 
-    // Close existing database
-    await _database?.close();
-    _database = null;
+    SyncService.instance.stopAutoSync();
+    try {
+      // Close existing database
+      await _database?.close();
+      _database = null;
 
-    // Copy imported file to database location
-    final importFile = File(importPath);
-    if (!await importFile.exists()) {
-      throw Exception('Import file does not exist: $importPath');
+      // Copy imported file to database location
+      final importFile = File(importPath);
+      if (!await importFile.exists()) {
+        throw Exception('Import file does not exist: $importPath');
+      }
+
+      await importFile.copy(targetPath);
+
+      // Reopen database to validate
+      await database;
+    } finally {
+      SyncService.instance.startAutoSync();
     }
-
-    await importFile.copy(targetPath);
-
-    // Reopen database to validate
-    await database;
   }
 
   /// Get the current database file path.

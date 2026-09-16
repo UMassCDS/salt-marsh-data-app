@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:mass_marsh_app/screens/field_editor_dialog.dart';
+import 'package:mass_marsh_app/screens/form/field_editor_dialog.dart';
 
 class FormEditorScreen extends ConsumerStatefulWidget {
   final int orgId;
   final String formType; // 'common', 'vegetation', 'hydrology', 'elevation'
 
   const FormEditorScreen({
-    Key? key,
+    super.key,
     required this.orgId,
     required this.formType,
-  }) : super(key: key);
+  });
 
   @override
   ConsumerState<FormEditorScreen> createState() => _FormEditorScreenState();

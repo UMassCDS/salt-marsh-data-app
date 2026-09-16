@@ -10,7 +10,7 @@ class FieldEditorDialog extends StatefulWidget {
   final Function(Map<String, dynamic>) onSave;
 
   const FieldEditorDialog({
-    Key? key,
+    super.key,
     this.initialLabel,
     this.initialId,
     this.initialType,
@@ -18,7 +18,7 @@ class FieldEditorDialog extends StatefulWidget {
     this.initialSection,
     required this.availableSections,
     required this.onSave,
-  }) : super(key: key);
+  });
 
   @override
   State<FieldEditorDialog> createState() => _FieldEditorDialogState();

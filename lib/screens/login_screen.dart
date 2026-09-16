@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -32,7 +34,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         );
     if (!mounted) return;
     if (ref.read(authProvider).isAuthenticated) {
-      Navigator.of(context).pushNamedAndRemoveUntil('/org-select', (route) => false);
+      unawaited(Navigator.of(context).pushNamedAndRemoveUntil('/org-select', (route) => false));
     }
   }
 

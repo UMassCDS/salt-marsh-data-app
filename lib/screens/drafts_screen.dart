@@ -1,10 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
 import '../providers/field_outing_provider.dart';
 import '../models/field_outing/field_outing.dart';
 import '../utils/snackbar_utils.dart';
-import 'form_screen.dart';
+import 'form/form_screen.dart';
 
 class DraftsScreen extends ConsumerWidget {
   final String? monitoringTypeFilter;
@@ -111,9 +113,9 @@ class DraftsScreen extends ConsumerWidget {
         await service.deleteDraft(draft.id!);
         if (context.mounted) {
           showAppSnackBar(context, 'Draft deleted');
-          Navigator.of(context).pushReplacement(
+          unawaited(Navigator.of(context).pushReplacement(
             MaterialPageRoute(builder: (context) => const DraftsScreen()),
-          );
+          ));
         }
       } catch (e) {
         if (context.mounted) {
