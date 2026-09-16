@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  analyze-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.41.4
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      # --no-fatal-infos: this repo has ~9 known use_build_context_synchronously
+      # info-lints, a common Flutter false positive (mounted checked via the
+      # State, which the linter can't statically link to context.mounted).
+      # Warnings and errors still fail the build.
+      - name: Analyze
+        run: flutter analyze --no-fatal-infos
+
+      - name: Test
+        run: flutter test

@@ -8,10 +8,10 @@ class FormManagementScreen extends ConsumerStatefulWidget {
   final String orgName;
 
   const FormManagementScreen({
-    Key? key,
+    super.key,
     required this.orgId,
     required this.orgName,
-  }) : super(key: key);
+  });
 
   @override
   ConsumerState<FormManagementScreen> createState() =>

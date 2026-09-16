@@ -7,10 +7,10 @@ class FormEditorScreen extends ConsumerStatefulWidget {
   final String formType; // 'common', 'vegetation', 'hydrology', 'elevation'
 
   const FormEditorScreen({
-    Key? key,
+    super.key,
     required this.orgId,
     required this.formType,
-  }) : super(key: key);
+  });
 
   @override
   ConsumerState<FormEditorScreen> createState() => _FormEditorScreenState();
