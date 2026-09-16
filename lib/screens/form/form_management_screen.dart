@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mass_marsh_app/screens/form/form_editor_screen.dart';
 
+// Custom form-builder feature (org admin designs form fields) - deferred and unwired, not dead code.
 class FormManagementScreen extends ConsumerStatefulWidget {
   final int orgId;
   final String orgName;
