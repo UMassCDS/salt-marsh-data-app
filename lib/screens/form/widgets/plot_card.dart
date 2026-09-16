@@ -152,7 +152,7 @@ class PlotCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
 
-            // Plot fields — conditional per protocol
+            // Plot fields - conditional per protocol
             if (!(activeProtocol?.isFieldHidden('transect_id') ?? false))
               PlotTextField(
                 field: 'transectId',

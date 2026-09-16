@@ -139,7 +139,7 @@ class SpeciesCoverInputState extends State<SpeciesCoverInput> {
     // Build a lookup map for extra species scientific names
     final speciesMap = {for (final s in widget.allSpecies) s.code: s};
 
-    // Helper: builds a cover input — TextField for increment=1, ChoiceChips otherwise
+    // Helper: builds a cover input - TextField for increment=1, ChoiceChips otherwise
     Widget buildCoverInput({
       required String code,
       required TextEditingController? controller,

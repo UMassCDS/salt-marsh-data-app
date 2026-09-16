@@ -15,7 +15,7 @@ class OrgService {
           ),
         );
 
-  /// GET /api/v1/auth/me/orgs — returns all organizations the current user belongs to.
+  /// GET /api/v1/auth/me/orgs - returns all organizations the current user belongs to.
   Future<List<Organization>> getMyOrgs(String token) async {
     final response = await _dio.get(
       '/api/v1/auth/me/orgs',

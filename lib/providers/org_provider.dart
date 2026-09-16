@@ -8,15 +8,11 @@ import '../services/auth_cache.dart';
 import '../services/org_service.dart';
 import 'auth_provider.dart';
 
-// ---------------------------------------------------------------------------
 // OrgService provider
-// ---------------------------------------------------------------------------
 
 final orgServiceProvider = Provider<OrgService>((ref) => OrgService());
 
-// ---------------------------------------------------------------------------
 // List of orgs the current user belongs to
-// ---------------------------------------------------------------------------
 
 // Falls back to the cached list when the network call fails, so org
 // selection works with no signal instead of hanging on a request that
@@ -41,9 +37,7 @@ final myOrgsProvider = FutureProvider<List<Organization>>((ref) async {
 final cachedOrgsProvider =
     FutureProvider<List<Organization>>((ref) => AuthCache.readOrgs());
 
-// ---------------------------------------------------------------------------
 // Selected org state
-// ---------------------------------------------------------------------------
 
 class SelectedOrgNotifier extends Notifier<Organization?> {
   static const _orgIdKey = 'selected_org_id';

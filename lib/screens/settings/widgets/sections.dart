@@ -66,7 +66,7 @@ class AccountSection extends StatelessWidget {
                             children: [
                               Expanded(
                                 child: Text(
-                                  user?.fullName ?? '—',
+                                  user?.fullName ?? '-',
                                   style: textTheme.titleMedium?.copyWith(
                                     fontWeight: FontWeight.w700,
                                   ),
@@ -92,7 +92,7 @@ class AccountSection extends StatelessWidget {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            user?.email ?? '—',
+                            user?.email ?? '-',
                             style: textTheme.bodySmall?.copyWith(
                               color: colorScheme.onSurface
                                   .withValues(alpha: 0.6),

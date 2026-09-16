@@ -48,7 +48,7 @@ void _generateForegroundIcon() {
     }
   }
 
-  // Draw at 60% scale — keeps content well within Android's safe zone (66%)
+  // Draw at 60% scale - keeps content well within Android's safe zone (66%)
   _drawDesign(image, 0.6);
 
   final outPath = 'assets/icon_foreground.png';
