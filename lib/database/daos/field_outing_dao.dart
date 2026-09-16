@@ -1,9 +1,11 @@
-import 'dart:math';
 import 'package:sqflite/sqflite.dart';
+import 'package:uuid/uuid.dart';
 import '../../models/field_outing/field_outing.dart';
 
 /// Data Access Object for FieldOuting records
 class FieldOutingDao {
+  static const _uuid = Uuid();
+
   final Database db;
 
   FieldOutingDao(this.db);
@@ -200,9 +202,5 @@ class FieldOutingDao {
     return FieldOuting.fromMap(row);
   }
 
-  /// Generate a simple UUID (v4-like)
-  /// Note: For production, use uuid package
-  String _generateUuid() {
-    return 'local_${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(10000)}';
-  }
+  String _generateUuid() => _uuid.v4();
 }
