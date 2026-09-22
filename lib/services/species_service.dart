@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:sqflite/sqflite.dart' show ConflictAlgorithm;
+import '../config/env.dart';
 import '../database/app_database.dart';
 import 'app_logger.dart';
 import 'sync_service.dart';
@@ -44,7 +45,7 @@ class SpeciesService {
     if (await SyncService.instance.hasConnectivity()) {
       try {
         final response = await Dio().get(
-          '${const String.fromEnvironment('API_BASE_URL', defaultValue: 'https://massmarsh.azurewebsites.net')}/api/mobile/species',
+          '$kApiBaseUrl/api/mobile/species',
           options: Options(receiveTimeout: const Duration(seconds: 30)),
         );
         if (response.statusCode == 200 && response.data['success'] == true) {
