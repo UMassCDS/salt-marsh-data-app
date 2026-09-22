@@ -1,7 +1,6 @@
 import 'package:dio/dio.dart';
+import '../config/env.dart';
 import '../models/user/user.dart';
-
-const kApiBaseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'https://saltmarshdata.org');
 
 class AuthService {
   final Dio _dio;
