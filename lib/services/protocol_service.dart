@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:sqflite/sqflite.dart' show ConflictAlgorithm;
+import '../config/env.dart';
 import '../database/app_database.dart';
 import 'app_logger.dart';
 import 'sync_service.dart';
@@ -109,10 +110,6 @@ class ProtocolService {
   ProtocolService._();
 
   final _logger = appLogger;
-  static const String _apiBase = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: 'https://massmarsh.azurewebsites.net',
-  );
 
   /// Fetch the active protocol for [orgId] from the API and cache it locally.
   /// Falls back to the local cache when offline or on error.
@@ -121,7 +118,7 @@ class ProtocolService {
     if (await SyncService.instance.hasConnectivity()) {
       try {
         final response = await Dio().get(
-          '$_apiBase/api/mobile/orgs/$orgId/protocol',
+          '$kApiBaseUrl/api/mobile/orgs/$orgId/protocol',
           options: Options(receiveTimeout: const Duration(seconds: 30)),
         );
         if (response.statusCode == 200 && response.data['success'] == true) {

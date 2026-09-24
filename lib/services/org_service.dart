@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
+import '../config/env.dart';
 import '../models/organization/organization.dart';
-import 'auth_service.dart';
 
 class OrgService {
   final Dio _dio;
