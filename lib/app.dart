@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'config/env.dart';
 import 'providers/auth_provider.dart';
 import 'providers/org_provider.dart';
 import 'providers/theme_provider.dart';
@@ -143,6 +144,9 @@ class MassMarshApp extends ConsumerWidget {
       darkTheme: _buildTheme(Brightness.dark),
       themeMode: themeMode,
       debugShowCheckedModeBanner: false,
+      builder: (context, child) => kIsDevFlavor
+          ? Banner(message: 'DEV', location: BannerLocation.topEnd, child: child)
+          : child!,
       home: _resolveHome(auth, selectedOrg, orgRestored),
       onGenerateRoute: (settings) {
         if (settings.name == '/home') {

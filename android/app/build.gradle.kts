@@ -44,6 +44,19 @@ android {
         versionName = flutter.versionName
     }
 
+    flavorDimensions += "env"
+    productFlavors {
+        create("prod") {
+            dimension = "env"
+            resValue("string", "app_name", "Salt Marsh Data")
+        }
+        create("dev") {
+            dimension = "env"
+            applicationIdSuffix = ".dev"
+            resValue("string", "app_name", "Salt Marsh Data DEV")
+        }
+    }
+
     signingConfigs {
         if (keyPropertiesFile.exists()) {
             create("release") {
