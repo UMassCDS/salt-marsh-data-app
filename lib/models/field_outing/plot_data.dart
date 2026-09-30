@@ -26,6 +26,8 @@ class PlotData {
   double distanceAlongTransect;
   double latitude;
   double longitude;
+  double? accuracyM;
+  String? locationQuality;
   double canopyHeight;
   double thatchHeight;
   double? elevation;
@@ -52,6 +54,8 @@ class PlotData {
     required this.distanceAlongTransect,
     required this.latitude,
     required this.longitude,
+    this.accuracyM,
+    this.locationQuality,
     required this.canopyHeight,
     required this.thatchHeight,
     this.elevation,
@@ -117,6 +121,8 @@ class PlotData {
       distanceAlongTransect: (record['distance_along_transect_m'] as num?)?.toDouble() ?? 0.0,
       latitude: (record['latitude'] as num?)?.toDouble() ?? 0.0,
       longitude: (record['longitude'] as num?)?.toDouble() ?? 0.0,
+      accuracyM: (record['accuracy_m'] as num?)?.toDouble(),
+      locationQuality: record['location_quality'] as String?,
       canopyHeight: (record['canopy_height_m'] as num?)?.toDouble() ?? 0.0,
       thatchHeight: (record['thatch_height_m'] as num?)?.toDouble() ?? 0.0,
       elevation: (record['elevation_m'] as num?)?.toDouble(),

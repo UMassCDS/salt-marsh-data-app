@@ -14,7 +14,7 @@ import 'seeds/template_seeds.dart';
 /// Main database class for MassMarsh app
 class AppDatabase {
   static const String _dbName = 'mass_marsh.db';
-  static const int _dbVersion = 8;
+  static const int _dbVersion = 10;
 
   static final AppDatabase _instance = AppDatabase._internal();
 
@@ -253,6 +253,39 @@ class AppDatabase {
         'ALTER TABLE vegetation_records ADD COLUMN photo_upload_attempts INTEGER DEFAULT 0',
       );
     }
+    if (oldVersion < 9) {
+      // Seed rows added after initial install won't exist on upgraded devices
+      await db.insert(
+        'species_lookup',
+        {'species_code': 'WATER', 'scientific_name': 'Water', 'common_name': null, 'active': 1},
+        conflictAlgorithm: ConflictAlgorithm.ignore,
+      );
+      await db.insert(
+        'species_lookup',
+        {'species_code': 'ALGAE', 'scientific_name': 'Algae', 'common_name': null, 'active': 1},
+        conflictAlgorithm: ConflictAlgorithm.ignore,
+      );
+    }
+    if (oldVersion < 10) {
+      // GPS fix quality: accuracy_m already exists on vegetation_records.
+      // Guarded by existence check - an interrupted upgrade (app killed
+      // mid-migration) can leave a column physically added without
+      // user_version having been bumped, which would otherwise crash every
+      // future launch with "duplicate column name" before the app can start
+      await _addColumnIfMissing(db, 'field_outings', 'accuracy_m', 'REAL');
+      await _addColumnIfMissing(db, 'field_outings', 'location_quality', 'TEXT');
+      await _addColumnIfMissing(db, 'vegetation_records', 'location_quality', 'TEXT');
+      await _addColumnIfMissing(db, 'elevation_records', 'accuracy_m', 'REAL');
+      await _addColumnIfMissing(db, 'elevation_records', 'location_quality', 'TEXT');
+    }
+  }
+
+  Future<void> _addColumnIfMissing(Database db, String table, String column, String sqlType) async {
+    final info = await db.rawQuery('PRAGMA table_info($table)');
+    final exists = info.any((row) => row['name'] == column);
+    if (!exists) {
+      await db.execute('ALTER TABLE $table ADD COLUMN $column $sqlType');
+    }
   }
 
   /// Seed initial data into database
@@ -268,6 +301,8 @@ class AppDatabase {
       ('TEST_NEW', 'Test New', null),
       ('DEAD', 'Dead Vegetation', null),
       ('WRACK', 'Wrack', null),
+      ('WATER', 'Water', null),
+      ('ALGAE', 'Algae', null),
       ('TRMAR', 'Triglochin maritima', 'Seaside Arrowgrass'),
       ('TECAN', 'Teucrium canadensis', 'Canada Germander'),
       ('JUBAL', 'Juncus balticus', 'Baltic Rush'),

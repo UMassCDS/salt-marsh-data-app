@@ -1,6 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../../../constants/species_constants.dart';
 import '../../../models/field_outing/plot_data.dart';
 import '../../../services/species_service.dart';
+
+// Blocks non-digit characters and clamps the parsed value to [0, 100] as
+// the user types, so the field can never visibly hold an out-of-range %.
+class _PercentInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    var digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.isEmpty) {
+      return newValue.copyWith(text: digits);
+    }
+    final parsed = int.parse(digits).clamp(0, 100);
+    digits = parsed.toString();
+    return TextEditingValue(
+      text: digits,
+      selection: TextSelection.collapsed(offset: digits.length),
+    );
+  }
+}
 
 class SpeciesCoverInput extends StatefulWidget {
   final PlotData plot;
@@ -8,6 +31,7 @@ class SpeciesCoverInput extends StatefulWidget {
   final VoidCallback onChanged;
   final int coverIncrement;
   final List<String> pinnedCodes;
+  final bool require100Percent;
 
   const SpeciesCoverInput({
     super.key,
@@ -16,6 +40,7 @@ class SpeciesCoverInput extends StatefulWidget {
     required this.onChanged,
     this.coverIncrement = 1,
     this.pinnedCodes = const ['SPALT', 'SPPAT', 'BARE', 'DEAD'],
+    this.require100Percent = false,
   });
 
   @override
@@ -32,6 +57,10 @@ class SpeciesCoverInputState extends State<SpeciesCoverInput> {
 
   final _searchController = TextEditingController();
   String _searchQuery = '';
+  final Map<String, GlobalKey> _pinnedRowKeys = {};
+
+  GlobalKey _pinnedKey(String code) =>
+      _pinnedRowKeys.putIfAbsent(code, GlobalKey.new);
 
   @override
   void dispose() {
@@ -58,6 +87,38 @@ class SpeciesCoverInputState extends State<SpeciesCoverInput> {
       });
   }
 
+  // Pinned species matching the search query, so a field user typing an
+  // abbreviation for an already-pinned species can still find it - just
+  // routed to the fixed pinned row above instead of a second, duplicate entry.
+  List<String> _filteredPinnedMatches() {
+    final q = _searchQuery.toLowerCase().trim();
+    if (q.isEmpty) return [];
+    final speciesMap = {for (final s in widget.allSpecies) s.code: s};
+    return widget.pinnedCodes.where((code) {
+      final item = speciesMap[code];
+      final commonName = item?.commonName ?? _pinnedLabels[code] ?? '';
+      final scientificName = item?.scientificName ?? '';
+      final haystack = '$code $commonName $scientificName'.toLowerCase();
+      return haystack.contains(q);
+    }).toList();
+  }
+
+  void _jumpToPinned(String code) {
+    setState(() {
+      _searchController.clear();
+      _searchQuery = '';
+    });
+    final ctx = _pinnedKey(code).currentContext;
+    if (ctx != null) {
+      Scrollable.ensureVisible(
+        ctx,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+        alignment: 0.1,
+      );
+    }
+  }
+
   void _updatePinned(String code, String rawValue) {
     final percent = int.tryParse(rawValue);
     final plot = widget.plot;
@@ -71,6 +132,11 @@ class SpeciesCoverInputState extends State<SpeciesCoverInput> {
       }
     });
     widget.onChanged();
+  }
+
+  void _clearPinned(String code) {
+    widget.plot.pinnedControllers[code]?.clear();
+    _updatePinned(code, '');
   }
 
   void _addExtra(SpeciesItem species) {
@@ -96,10 +162,10 @@ class SpeciesCoverInputState extends State<SpeciesCoverInput> {
   }
 
   void _updateExtra(String code, String rawValue) {
-    final percent = int.tryParse(rawValue);
+    final percent = int.tryParse(rawValue) ?? 0;
     final plot = widget.plot;
     final idx = plot.species.indexWhere((s) => s.speciesCode == code);
-    if (idx < 0 || percent == null) return;
+    if (idx < 0) return;
     setState(() {
       plot.species[idx] = PlotSpeciesEntry(
         speciesCode: code,
@@ -109,20 +175,34 @@ class SpeciesCoverInputState extends State<SpeciesCoverInput> {
     widget.onChanged();
   }
 
-  Widget _speciesLabel(BuildContext context, String code, String commonLabel, String scientificName) {
+  Widget _speciesLabel(BuildContext context, String code, String commonLabel, String scientificName,
+      {required bool isWideScreen}) {
     final theme = Theme.of(context);
+    // A touch smaller on narrow phones so more of the name fits before it
+    // has to truncate - still ellipsizes past that, by design
+    final primaryStyle = isWideScreen ? theme.textTheme.bodyLarge : theme.textTheme.bodyMedium;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(commonLabel, style: theme.textTheme.bodyMedium),
         Text(
-          scientificName,
-          style: theme.textTheme.bodySmall?.copyWith(
-            fontStyle: FontStyle.italic,
-            color: theme.colorScheme.onSurfaceVariant,
+          scientificName.isEmpty ? commonLabel : scientificName,
+          style: primaryStyle?.copyWith(
+            fontStyle: scientificName.isEmpty ? FontStyle.normal : FontStyle.italic,
+            fontWeight: FontWeight.w600,
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
+        if (scientificName.isNotEmpty)
+          Text(
+            commonLabel,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
       ],
     );
   }
@@ -135,9 +215,17 @@ class SpeciesCoverInputState extends State<SpeciesCoverInput> {
         .where((s) => !widget.pinnedCodes.contains(s.speciesCode))
         .toList();
     final filtered = _filteredSpecies();
+    final pinnedMatches = _filteredPinnedMatches();
 
     // Build a lookup map for extra species scientific names
     final speciesMap = {for (final s in widget.allSpecies) s.code: s};
+
+    // Wide screens (tablets in the field) get a bigger, easier-to-hit box
+    final isWideScreen = MediaQuery.sizeOf(context).width >= 600;
+    final coverBoxWidth = isWideScreen ? 88.0 : 68.0;
+    final darkOutline = OutlineInputBorder(
+      borderSide: BorderSide(color: theme.colorScheme.outline, width: 1.5),
+    );
 
     // Helper: builds a cover input - TextField for increment=1, ChoiceChips otherwise
     Widget buildCoverInput({
@@ -148,15 +236,18 @@ class SpeciesCoverInputState extends State<SpeciesCoverInput> {
     }) {
       if (widget.coverIncrement == 1) {
         return SizedBox(
-          width: 64,
+          width: coverBoxWidth,
           child: TextField(
             controller: controller,
             keyboardType: TextInputType.number,
             textAlign: TextAlign.center,
-            decoration: const InputDecoration(
+            inputFormatters: [_PercentInputFormatter()],
+            style: isWideScreen ? theme.textTheme.titleMedium : null,
+            decoration: InputDecoration(
               suffixText: '%',
-              border: OutlineInputBorder(),
-              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              border: darkOutline,
+              enabledBorder: darkOutline,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
               isDense: true,
             ),
             onChanged: onChanged,
@@ -180,13 +271,50 @@ class SpeciesCoverInputState extends State<SpeciesCoverInput> {
       );
     }
 
+    final coverTotal = plot.species
+        .where((s) => !kCoverExcludedSpeciesCodes.contains(s.speciesCode))
+        .fold<int>(0, (sum, s) => sum + s.percentageCover);
+    final totalMet = coverTotal == 100;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Header
-        Text(
-          'Species in this Plot (${plot.species.length})',
-          style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Flexible(
+              child: Text(
+                'Species in this Plot (${plot.species.length})',
+                style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: totalMet
+                    ? Colors.green.withValues(alpha: 0.15)
+                    : (widget.require100Percent
+                        ? Colors.orange.withValues(alpha: 0.15)
+                        : theme.colorScheme.surfaceContainerHighest),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                widget.require100Percent
+                    ? 'Total: $coverTotal% ${totalMet ? '' : '(need 100%)'}'
+                    : 'Total: $coverTotal%',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: totalMet
+                      ? Colors.green.shade800
+                      : (widget.require100Percent ? Colors.orange.shade900 : null),
+                ),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 12),
 
@@ -202,13 +330,23 @@ class SpeciesCoverInputState extends State<SpeciesCoverInput> {
               .firstWhere((s) => s.speciesCode == code,
                   orElse: () => PlotSpeciesEntry(speciesCode: code, percentageCover: 0))
               .percentageCover;
+          final clearButton = currentValue > 0
+              ? IconButton(
+                  icon: const Icon(Icons.close, size: 18, color: Colors.red),
+                  padding: EdgeInsets.zero,
+                  tooltip: 'Reset to 0%',
+                  onPressed: () => _clearPinned(code),
+                )
+              : null;
           if (widget.coverIncrement == 1) {
             return Padding(
+              key: _pinnedKey(code),
               padding: const EdgeInsets.only(bottom: 8),
               child: Row(
                 children: [
                   Expanded(
-                    child: _speciesLabel(context, code, '$code – $commonLabel', scientificName),
+                    child: _speciesLabel(context, code, '$code – $commonLabel', scientificName,
+                        isWideScreen: isWideScreen),
                   ),
                   buildCoverInput(
                     code: code,
@@ -216,16 +354,26 @@ class SpeciesCoverInputState extends State<SpeciesCoverInput> {
                     currentValue: currentValue,
                     onChanged: (v) => _updatePinned(code, v),
                   ),
+                  ?clearButton,
                 ],
               ),
             );
           }
           return Padding(
+            key: _pinnedKey(code),
             padding: const EdgeInsets.only(bottom: 8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _speciesLabel(context, code, '$code – $commonLabel', scientificName),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _speciesLabel(context, code, '$code – $commonLabel', scientificName,
+                          isWideScreen: isWideScreen),
+                    ),
+                    ?clearButton,
+                  ],
+                ),
                 const SizedBox(height: 4),
                 buildCoverInput(
                   code: code,
@@ -253,7 +401,7 @@ class SpeciesCoverInputState extends State<SpeciesCoverInput> {
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Row(
                   children: [
-                    Expanded(child: _speciesLabel(context, code, commonLabel, scientificName)),
+                    Expanded(child: _speciesLabel(context, code, commonLabel, scientificName, isWideScreen: isWideScreen)),
                     buildCoverInput(
                       code: code,
                       controller: controller,
@@ -276,7 +424,7 @@ class SpeciesCoverInputState extends State<SpeciesCoverInput> {
                 children: [
                   Row(
                     children: [
-                      Expanded(child: _speciesLabel(context, code, commonLabel, scientificName)),
+                      Expanded(child: _speciesLabel(context, code, commonLabel, scientificName, isWideScreen: isWideScreen)),
                       IconButton(
                         icon: const Icon(Icons.close, size: 18, color: Colors.red),
                         padding: EdgeInsets.zero,
@@ -311,22 +459,46 @@ class SpeciesCoverInputState extends State<SpeciesCoverInput> {
           onChanged: (v) => setState(() => _searchQuery = v),
         ),
 
-        // Search results
-        if (filtered.isNotEmpty)
+        // Search results (pinned matches first, greyed - they route back to
+        // the fixed pinned row above rather than adding a duplicate)
+        if (filtered.isNotEmpty || pinnedMatches.isNotEmpty)
           Container(
             margin: const EdgeInsets.only(top: 4),
             decoration: BoxDecoration(
               border: Border.all(color: theme.colorScheme.outline),
               borderRadius: BorderRadius.circular(8),
             ),
-            constraints: const BoxConstraints(maxHeight: 220),
+            constraints: const BoxConstraints(maxHeight: 260),
             child: ListView.separated(
               shrinkWrap: true,
               padding: EdgeInsets.zero,
-              itemCount: filtered.length,
+              itemCount: pinnedMatches.length + filtered.length,
               separatorBuilder: (_, _) => const Divider(height: 1),
               itemBuilder: (context, i) {
-                final s = filtered[i];
+                if (i < pinnedMatches.length) {
+                  final code = pinnedMatches[i];
+                  final item = speciesMap[code];
+                  final commonLabel = item?.commonName ?? _pinnedLabels[code] ?? code;
+                  return ListTile(
+                    dense: true,
+                    title: Text(
+                      '$code – $commonLabel (pinned)',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    subtitle: Text(
+                      item?.scientificName ?? '',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        fontStyle: FontStyle.italic,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    trailing: const Icon(Icons.arrow_upward, size: 18),
+                    onTap: () => _jumpToPinned(code),
+                  );
+                }
+                final s = filtered[i - pinnedMatches.length];
                 return ListTile(
                   dense: true,
                   title: Text(s.label, style: theme.textTheme.bodyMedium),

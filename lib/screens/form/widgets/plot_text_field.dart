@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 // A single field in a plot card that mutates plot state by field name via
 // [onChanged] - keeps PlotCard's field list a plain data-driven list rather
@@ -11,6 +12,7 @@ class PlotTextField extends StatelessWidget {
   final bool isNumber;
   final bool isDropdown;
   final bool isOptional;
+  final bool allowNegative;
   final int maxLines;
   final List<String>? dropdownOptions;
   final TextEditingController? controller;
@@ -26,6 +28,7 @@ class PlotTextField extends StatelessWidget {
     this.isNumber = false,
     this.isDropdown = false,
     this.isOptional = false,
+    this.allowNegative = true,
     this.maxLines = 1,
     this.dropdownOptions,
     this.controller,
@@ -72,12 +75,23 @@ class PlotTextField extends StatelessWidget {
           border: const OutlineInputBorder(),
           prefixIcon: Icon(icon),
         ),
-        keyboardType: isNumber ? TextInputType.number : TextInputType.text,
+        keyboardType: isNumber
+            ? TextInputType.numberWithOptions(decimal: true, signed: allowNegative)
+            : TextInputType.text,
+        inputFormatters: isNumber && !allowNegative
+            ? [FilteringTextInputFormatter.deny(RegExp(r'-'))]
+            : null,
         maxLines: maxLines,
         onChanged: (value) => onChanged(field, value),
         validator: (value) {
           if (!isOptional && (value == null || value.isEmpty)) {
             return 'This field is required';
+          }
+          if (!allowNegative && value != null) {
+            final parsed = double.tryParse(value);
+            if (parsed != null && parsed < 0) {
+              return 'Cannot be negative';
+            }
           }
           return null;
         },

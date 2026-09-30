@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/field_outing/field_outing.dart';
+import '../providers/auth_provider.dart';
 import '../providers/field_outing_provider.dart';
 import '../providers/org_provider.dart';
 import '../services/protocol_service.dart';
@@ -110,6 +111,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final signedInOffline = ref.watch(authProvider.select((s) => s.signedInOffline));
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final orgName = ref.watch(selectedOrgProvider)?.name ?? '';
@@ -156,6 +158,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (signedInOffline)
+              Container(
+                color: colorScheme.tertiaryContainer,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  children: [
+                    Icon(Icons.cloud_off, color: colorScheme.onTertiaryContainer),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Signed in offline - showing your last synced data. Changes upload when you are back online.',
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.onTertiaryContainer,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             // Hero banner
             Container(
               padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),

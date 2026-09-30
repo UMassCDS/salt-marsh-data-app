@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../models/field_outing/plot_data.dart';
 import '../../../services/protocol_service.dart';
 import '../../../services/species_service.dart';
+import '../../../utils/gps_quality.dart';
 import '../../../utils/photo_viewer.dart';
 import 'plot_text_field.dart';
 import 'species_cover_input.dart';
@@ -75,7 +76,9 @@ const List<String> kHabitatOptions = [
   'High Marsh',
   'Pool',
   'Upper Edge',
-  'Transition'
+  'Transition',
+  'Panne',
+  'Ditch'
 ];
 
 class PlotCard extends StatelessWidget {
@@ -83,11 +86,14 @@ class PlotCard extends StatelessWidget {
   final PlotData plot;
   final bool canDelete;
   final ProtocolDefinition? activeProtocol;
+  final bool gpsCapturing;
+  final double? gpsLiveAccuracy;
   final List<SpeciesItem> allSpecies;
   final VoidCallback onCollapse;
   final VoidCallback onDelete;
   final void Function(String field, String value) onFieldChanged;
   final VoidCallback onGetGpsLocation;
+  final VoidCallback onStopGps;
   final ValueChanged<String> onRtkChanged;
   final ValueChanged<String?> onSubclassChanged;
   final VoidCallback onRemovePhoto;
@@ -101,11 +107,14 @@ class PlotCard extends StatelessWidget {
     required this.plot,
     required this.canDelete,
     required this.activeProtocol,
+    required this.gpsCapturing,
+    required this.gpsLiveAccuracy,
     required this.allSpecies,
     required this.onCollapse,
     required this.onDelete,
     required this.onFieldChanged,
     required this.onGetGpsLocation,
+    required this.onStopGps,
     required this.onRtkChanged,
     required this.onSubclassChanged,
     required this.onRemovePhoto,
@@ -208,19 +217,77 @@ class PlotCard extends StatelessWidget {
               onChanged: onFieldChanged,
             ),
 
-            // GPS Button
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: ElevatedButton.icon(
-                onPressed: onGetGpsLocation,
-                icon: const Icon(Icons.my_location),
-                label: const Text('Get GPS Location'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
+            // GPS Button + live/result accuracy indicator
+            Builder(builder: (context) {
+              final hasFix = plot.latitude != 0 || plot.longitude != 0;
+              final tier = plot.locationQuality;
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Column(
+                  children: [
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: FilledButton.icon(
+                        onPressed: gpsCapturing ? onStopGps : onGetGpsLocation,
+                        icon: gpsCapturing
+                            ? SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  color: Theme.of(context).colorScheme.onPrimary,
+                                ),
+                              )
+                            : const Icon(Icons.my_location),
+                        label: Text(
+                          gpsCapturing
+                              ? (gpsLiveAccuracy != null
+                                  ? 'Capturing ±${gpsLiveAccuracy!.toStringAsFixed(0)} m - tap to stop'
+                                  : 'Capturing GPS - tap to stop')
+                              : (hasFix ? 'Recapture GPS Location' : 'Get GPS Location'),
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ),
+                    if (!gpsCapturing && hasFix && plot.accuracyM != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Chip(
+                              avatar: Icon(
+                                tier == 'gps_good'
+                                    ? Icons.check_circle
+                                    : (tier == 'gps_fair' ? Icons.info : Icons.warning),
+                                size: 18,
+                                color: tier == 'gps_good'
+                                    ? Colors.green
+                                    : (tier == 'gps_fair' ? Colors.orange : Colors.red),
+                              ),
+                              label: Text(
+                                '±${plot.accuracyM!.toStringAsFixed(0)} m · ${qualityLabel(tier ?? '')}',
+                              ),
+                              visualDensity: VisualDensity.compact,
+                            ),
+                            if (qualityHint(tier ?? '') != null)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 12, top: 2),
+                                child: Text(
+                                  qualityHint(tier ?? '')!,
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        color: tier == 'coarse' ? Colors.red.shade700 : Colors.orange.shade800,
+                                      ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                  ],
                 ),
-              ),
-            ),
+              );
+            }),
 
             if (!(activeProtocol?.isFieldHidden('canopy_height_m') ?? false))
               PlotTextField(
@@ -229,6 +296,7 @@ class PlotCard extends StatelessWidget {
                 label: 'Canopy Height (m)',
                 icon: Icons.height,
                 isNumber: true,
+                allowNegative: false,
                 onChanged: onFieldChanged,
               ),
             if (!(activeProtocol?.isFieldHidden('thatch_height_m') ?? false))
@@ -238,6 +306,7 @@ class PlotCard extends StatelessWidget {
                 label: 'Thatch Height (m)',
                 icon: Icons.height,
                 isNumber: true,
+                allowNegative: false,
                 onChanged: onFieldChanged,
               ),
             if (!(activeProtocol?.isFieldHidden('elevation_navd88_m') ?? false))
@@ -401,6 +470,7 @@ class PlotCard extends StatelessWidget {
               onChanged: onSpeciesChanged,
               coverIncrement: activeProtocol?.speciesConfig.coverIncrement ?? 1,
               pinnedCodes: activeProtocol?.speciesConfig.pinnedSpecies ?? const ['SPALT', 'SPPAT', 'BARE', 'DEAD'],
+              require100Percent: activeProtocol?.speciesConfig.require100Percent ?? true,
             ),
           ],
         ),

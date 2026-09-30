@@ -3,7 +3,8 @@ import 'dart:convert';
 import 'plot_data.dart';
 
 String generatePlotId(String transectId, int plotNumber) {
-  return [transectId, plotNumber.toString()].where((p) => p.isNotEmpty).join('_');
+  final padded = plotNumber.toString().padLeft(2, '0');
+  return [transectId, padded].where((p) => p.isNotEmpty).join('_');
 }
 
 class HydrologyFields {
@@ -109,6 +110,8 @@ class DraftSnapshot {
       'distance_along_transect_m': plot.distanceAlongTransect,
       'latitude': plot.latitude,
       'longitude': plot.longitude,
+      'accuracy_m': plot.accuracyM,
+      'location_quality': plot.locationQuality,
       'elevation_m': plot.elevation,
       'canopy_height_m': plot.canopyHeight,
       'thatch_height_m': plot.thatchHeight,
