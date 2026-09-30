@@ -66,6 +66,7 @@ class _FormScreenState extends ConsumerState<FormScreen>
   // shift indices and write the result into the wrong plot
   final Set<String> _gpsCapturing = {};
   final Map<String, double> _gpsLiveAccuracy = {};
+  final Map<String, VoidCallback> _gpsStoppers = {};
 
   // Image picker
   final ImagePicker _imagePicker = ImagePicker();
@@ -579,6 +580,9 @@ class _FormScreenState extends ConsumerState<FormScreen>
       );
       final sub = stream.listen(null);
       final completer = Completer<void>();
+      _gpsStoppers[plotLocalId] = () {
+        if (!completer.isCompleted) completer.complete();
+      };
 
       sub.onData((position) {
         if (position.isMocked) return;
@@ -602,6 +606,7 @@ class _FormScreenState extends ConsumerState<FormScreen>
         Future.delayed(_gpsSampleWindow),
       ]);
       await sub.cancel();
+      _gpsStoppers.remove(plotLocalId);
 
       if (!mounted) return;
 
@@ -851,6 +856,7 @@ class _FormScreenState extends ConsumerState<FormScreen>
               onDelete: () => _deletePlot(index),
               onFieldChanged: (field, value) => _onPlotFieldChanged(index, field, value),
               onGetGpsLocation: () => _getGPSLocation(plot.localId),
+              onStopGps: () => _gpsStoppers[plot.localId]?.call(),
               onRtkChanged: (v) {
                 setState(() => plot.rtkPointNumber = v.isEmpty ? null : v);
                 _onEdited();
@@ -889,6 +895,11 @@ class _FormScreenState extends ConsumerState<FormScreen>
     _onEdited();
   }
 
+  void _markLocationManual(int plotIndex) {
+    _plots[plotIndex].accuracyM = null;
+    _plots[plotIndex].locationQuality = 'manual';
+  }
+
   void _onPlotFieldChanged(int plotIndex, String field, String value) {
     setState(() {
       switch (field) {
@@ -911,8 +922,10 @@ class _FormScreenState extends ConsumerState<FormScreen>
           _plots[plotIndex].distanceAlongTransect = double.tryParse(value) ?? 0;
         case 'latitude':
           _plots[plotIndex].latitude = double.tryParse(value) ?? 0;
+          _markLocationManual(plotIndex);
         case 'longitude':
           _plots[plotIndex].longitude = double.tryParse(value) ?? 0;
+          _markLocationManual(plotIndex);
         case 'canopyHeight':
           _plots[plotIndex].canopyHeight = double.tryParse(value) ?? 0;
         case 'thatchHeight':

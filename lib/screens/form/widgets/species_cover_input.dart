@@ -162,10 +162,10 @@ class SpeciesCoverInputState extends State<SpeciesCoverInput> {
   }
 
   void _updateExtra(String code, String rawValue) {
-    final percent = int.tryParse(rawValue);
+    final percent = int.tryParse(rawValue) ?? 0;
     final plot = widget.plot;
     final idx = plot.species.indexWhere((s) => s.speciesCode == code);
-    if (idx < 0 || percent == null) return;
+    if (idx < 0) return;
     setState(() {
       plot.species[idx] = PlotSpeciesEntry(
         speciesCode: code,

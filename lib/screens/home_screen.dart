@@ -8,7 +8,6 @@ import '../providers/field_outing_provider.dart';
 import '../providers/org_provider.dart';
 import '../services/protocol_service.dart';
 import '../services/species_service.dart';
-import '../utils/snackbar_utils.dart';
 import 'form/form_screen.dart';
 import 'outings/drafts_screen.dart';
 
@@ -112,16 +111,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(authProvider, (previous, next) {
-      if (next.signedInOffline && !(previous?.signedInOffline ?? false)) {
-        showAppSnackBar(
-          context,
-          "Signed in offline - showing your last synced data",
-          backgroundColor: Colors.blueGrey,
-          duration: const Duration(seconds: 4),
-        );
-      }
-    });
+    final signedInOffline = ref.watch(authProvider.select((s) => s.signedInOffline));
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final orgName = ref.watch(selectedOrgProvider)?.name ?? '';
@@ -168,6 +158,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (signedInOffline)
+              Container(
+                color: colorScheme.tertiaryContainer,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  children: [
+                    Icon(Icons.cloud_off, color: colorScheme.onTertiaryContainer),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Signed in offline - showing your last synced data. Changes upload when you are back online.',
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.onTertiaryContainer,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             // Hero banner
             Container(
               padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),

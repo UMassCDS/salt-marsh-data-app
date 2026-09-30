@@ -93,6 +93,7 @@ class PlotCard extends StatelessWidget {
   final VoidCallback onDelete;
   final void Function(String field, String value) onFieldChanged;
   final VoidCallback onGetGpsLocation;
+  final VoidCallback onStopGps;
   final ValueChanged<String> onRtkChanged;
   final ValueChanged<String?> onSubclassChanged;
   final VoidCallback onRemovePhoto;
@@ -113,6 +114,7 @@ class PlotCard extends StatelessWidget {
     required this.onDelete,
     required this.onFieldChanged,
     required this.onGetGpsLocation,
+    required this.onStopGps,
     required this.onRtkChanged,
     required this.onSubclassChanged,
     required this.onRemovePhoto,
@@ -224,24 +226,27 @@ class PlotCard extends StatelessWidget {
                 child: Column(
                   children: [
                     SizedBox(
-                      height: 48,
-                      child: ElevatedButton.icon(
-                        onPressed: gpsCapturing ? null : onGetGpsLocation,
+                      width: double.infinity,
+                      height: 56,
+                      child: FilledButton.icon(
+                        onPressed: gpsCapturing ? onStopGps : onGetGpsLocation,
                         icon: gpsCapturing
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            ? SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  color: Theme.of(context).colorScheme.onPrimary,
+                                ),
                               )
                             : const Icon(Icons.my_location),
-                        label: Text(gpsCapturing
-                            ? (gpsLiveAccuracy != null
-                                ? 'Capturing… ±${gpsLiveAccuracy!.toStringAsFixed(0)} m'
-                                : 'Capturing GPS…')
-                            : (hasFix ? 'Recapture GPS Location' : 'Get GPS Location')),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                          foregroundColor: Colors.white,
+                        label: Text(
+                          gpsCapturing
+                              ? (gpsLiveAccuracy != null
+                                  ? 'Capturing ±${gpsLiveAccuracy!.toStringAsFixed(0)} m - tap to stop'
+                                  : 'Capturing GPS - tap to stop')
+                              : (hasFix ? 'Recapture GPS Location' : 'Get GPS Location'),
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                         ),
                       ),
                     ),
