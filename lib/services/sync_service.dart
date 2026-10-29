@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:logger/logger.dart';
 import '../config/env.dart';
@@ -71,6 +72,15 @@ class SyncService {
         _baseUrl = baseUrl {
     _configureClient();
   }
+
+  @visibleForTesting
+  factory SyncService.forTesting({
+    required Dio dio,
+    required AppDatabase db,
+    required Connectivity connectivity,
+    String baseUrl = 'http://test.invalid',
+  }) =>
+      SyncService._(dio: dio, db: db, logger: appLogger, connectivity: connectivity, baseUrl: baseUrl);
 
   /// Get or create singleton instance
   static SyncService get instance {

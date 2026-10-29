@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
@@ -19,8 +20,12 @@ class AppDatabase {
   static final AppDatabase _instance = AppDatabase._internal();
 
   Database? _database;
+  final String? _pathOverride;
 
-  AppDatabase._internal();
+  AppDatabase._internal() : _pathOverride = null;
+
+  @visibleForTesting
+  AppDatabase.forTesting({required String path}) : _pathOverride = path;
 
   factory AppDatabase() {
     return _instance;
@@ -70,8 +75,7 @@ class AppDatabase {
 
   /// Initialize database
   Future<Database> _initDatabase() async {
-    final dbPath = await getDatabasesPath();
-    final path = join(dbPath, _dbName);
+    final path = _pathOverride ?? join(await getDatabasesPath(), _dbName);
 
     return openDatabase(
       path,
