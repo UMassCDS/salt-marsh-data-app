@@ -88,6 +88,7 @@ dev_dependencies:
 
   # App icon generation
   flutter_launcher_icons: ^0.13.1
+  sqflite_common_ffi: ^2.4.0+3
 
 flutter_launcher_icons:
   android: "launcher_icon"

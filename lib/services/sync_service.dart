@@ -1,12 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:logger/logger.dart';
 import '../config/env.dart';
 import '../database/app_database.dart';
 import 'app_logger.dart';
 import 'auth_cache.dart';
+import 'sync_log.dart';
 
 class ResyncResult {
   final bool alreadyOnServer;
@@ -40,6 +42,7 @@ class SyncService {
   final AppDatabase _db;
   final Logger _logger;
   final Connectivity _connectivity;
+  final SyncLog? _syncLog;
 
   /// Base URL for the API (should be configured per environment)
   late final String _baseUrl;
@@ -64,13 +67,32 @@ class SyncService {
     required Logger logger,
     required Connectivity connectivity,
     required String baseUrl,
+    SyncLog? syncLog,
   })  : _dio = dio,
         _db = db,
         _logger = logger,
         _connectivity = connectivity,
+        _syncLog = syncLog,
         _baseUrl = baseUrl {
     _configureClient();
   }
+
+  @visibleForTesting
+  factory SyncService.forTesting({
+    required Dio dio,
+    required AppDatabase db,
+    required Connectivity connectivity,
+    String baseUrl = 'http://test.invalid',
+    SyncLog? syncLog,
+  }) =>
+      SyncService._(
+        dio: dio,
+        db: db,
+        logger: appLogger,
+        connectivity: connectivity,
+        baseUrl: baseUrl,
+        syncLog: syncLog,
+      );
 
   /// Get or create singleton instance
   static SyncService get instance {
@@ -80,6 +102,7 @@ class SyncService {
       logger: appLogger,
       connectivity: Connectivity(),
       baseUrl: kApiBaseUrl,
+      syncLog: SyncLog.persistent,
     );
     return _instance!;
   }
@@ -89,6 +112,40 @@ class SyncService {
     _dio.options.baseUrl = _baseUrl;
     _dio.options.connectTimeout = const Duration(seconds: 60);
     _dio.options.receiveTimeout = const Duration(seconds: 60);
+
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        // Every path must reach handler.next, or the request hangs and its outing stays locked as uploading
+        onRequest: (options, handler) async {
+          try {
+            options.extra['sync_log_started_at'] = DateTime.now();
+            if (_syncLog != null) {
+              final networks = await _connectivity.checkConnectivity();
+              options.extra['sync_log_network'] = networks.map((n) => n.name).join('+');
+            }
+          } catch (_) {
+          } finally {
+            handler.next(options);
+          }
+        },
+        onResponse: (response, handler) async {
+          try {
+            await _logRequest(response.requestOptions, response: response);
+          } catch (_) {
+          } finally {
+            handler.next(response);
+          }
+        },
+        onError: (error, handler) async {
+          try {
+            await _logRequest(error.requestOptions, error: error);
+          } catch (_) {
+          } finally {
+            handler.next(error);
+          }
+        },
+      ),
+    );
 
     // Add interceptors for auth and logging
     _dio.interceptors.add(
@@ -116,6 +173,23 @@ class SyncService {
         },
       ),
     );
+  }
+
+  Future<void> _logRequest(RequestOptions options, {Response? response, DioException? error}) async {
+    final log = _syncLog;
+    if (log == null) return;
+    final startedAt = options.extra['sync_log_started_at'] as DateTime? ?? DateTime.now();
+    final status = response?.statusCode ?? error?.response?.statusCode;
+    final outcome = error != null ? (error.response != null ? 'http_error' : error.type.name) : 'ok';
+    await log.record(SyncLogEntry(
+      time: startedAt,
+      method: options.method,
+      path: options.path,
+      network: options.extra['sync_log_network'] as String? ?? 'unknown',
+      durationMs: DateTime.now().difference(startedAt).inMilliseconds,
+      outcome: outcome,
+      status: status,
+    ));
   }
 
   Map<String, dynamic> _vegRecordPayload(Map<String, dynamic> veg, String? photoUrl) {

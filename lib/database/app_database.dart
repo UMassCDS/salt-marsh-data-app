@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
@@ -19,8 +20,12 @@ class AppDatabase {
   static final AppDatabase _instance = AppDatabase._internal();
 
   Database? _database;
+  final String? _pathOverride;
 
-  AppDatabase._internal();
+  AppDatabase._internal() : _pathOverride = null;
+
+  @visibleForTesting
+  AppDatabase.forTesting({required String path}) : _pathOverride = path;
 
   factory AppDatabase() {
     return _instance;
@@ -70,8 +75,7 @@ class AppDatabase {
 
   /// Initialize database
   Future<Database> _initDatabase() async {
-    final dbPath = await getDatabasesPath();
-    final path = join(dbPath, _dbName);
+    final path = await getDatabasePath();
 
     return openDatabase(
       path,
@@ -422,8 +426,7 @@ class AppDatabase {
   /// // Share file using share_plus or file_picker
   /// ```
   Future<File> exportDatabase() async {
-    final dbPath = await getDatabasesPath();
-    final dbFile = File(join(dbPath, _dbName));
+    final dbFile = File(await getDatabasePath());
 
     // Auto-sync and background sync both open their own queries against this
     // database - paused around the close/reopen below so they can't hit a
@@ -469,8 +472,7 @@ class AppDatabase {
   /// await AppDatabase.instance.importDatabase(pickedFilePath);
   /// ```
   Future<void> importDatabase(String importPath) async {
-    final dbPath = await getDatabasesPath();
-    final targetPath = join(dbPath, _dbName);
+    final targetPath = await getDatabasePath();
 
     SyncService.instance.stopAutoSync();
     try {
@@ -496,8 +498,5 @@ class AppDatabase {
   /// Get the current database file path.
   ///
   /// Useful for debugging or advanced file operations.
-  Future<String> getDatabasePath() async {
-    final dbPath = await getDatabasesPath();
-    return join(dbPath, _dbName);
-  }
+  Future<String> getDatabasePath() async => _pathOverride ?? join(await getDatabasesPath(), _dbName);
 }
