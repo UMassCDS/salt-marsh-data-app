@@ -115,17 +115,34 @@ class SyncService {
 
     _dio.interceptors.add(
       InterceptorsWrapper(
-        onRequest: (options, handler) {
-          options.extra['sync_log_started_at'] = DateTime.now();
-          handler.next(options);
+        // Every path must reach handler.next, or the request hangs and its outing stays locked as uploading
+        onRequest: (options, handler) async {
+          try {
+            options.extra['sync_log_started_at'] = DateTime.now();
+            if (_syncLog != null) {
+              final networks = await _connectivity.checkConnectivity();
+              options.extra['sync_log_network'] = networks.map((n) => n.name).join('+');
+            }
+          } catch (_) {
+          } finally {
+            handler.next(options);
+          }
         },
         onResponse: (response, handler) async {
-          await _logRequest(response.requestOptions, response: response);
-          handler.next(response);
+          try {
+            await _logRequest(response.requestOptions, response: response);
+          } catch (_) {
+          } finally {
+            handler.next(response);
+          }
         },
         onError: (error, handler) async {
-          await _logRequest(error.requestOptions, error: error);
-          handler.next(error);
+          try {
+            await _logRequest(error.requestOptions, error: error);
+          } catch (_) {
+          } finally {
+            handler.next(error);
+          }
         },
       ),
     );
@@ -164,12 +181,11 @@ class SyncService {
     final startedAt = options.extra['sync_log_started_at'] as DateTime? ?? DateTime.now();
     final status = response?.statusCode ?? error?.response?.statusCode;
     final outcome = error != null ? (error.response != null ? 'http_error' : error.type.name) : 'ok';
-    final networks = await _connectivity.checkConnectivity();
     await log.record(SyncLogEntry(
       time: startedAt,
       method: options.method,
       path: options.path,
-      network: networks.map((n) => n.name).join('+'),
+      network: options.extra['sync_log_network'] as String? ?? 'unknown',
       durationMs: DateTime.now().difference(startedAt).inMilliseconds,
       outcome: outcome,
       status: status,

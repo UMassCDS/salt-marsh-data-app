@@ -147,6 +147,20 @@ void main() {
       expect(await newLog().entries(), isEmpty);
     });
 
+    test('a connectivity check that throws while logging never leaves a request hanging', () async {
+      final harness = await harnessWithLog();
+      final outingId = await harness.insertOuting(localId: 'o-1');
+      harness.connectivity
+        ..checkError = Exception('platform channel unavailable')
+        ..checksBeforeError = 1;
+
+      final serverId = await harness.sync.uploadFieldOuting(outingId).timeout(const Duration(seconds: 5));
+
+      expect(serverId, isNotNull);
+      expect(harness.backend.sessionCount, 1);
+      expect((await newLog().entries()).map((e) => e.network), everyElement('unknown'));
+    });
+
     test('syncing still works when the log cannot be written', () async {
       final broken = SyncLog(fileProvider: () async => File('${dir.path}/missing_dir/sync_log.jsonl'));
       final harness = await SyncHarness.create(syncLog: broken);
