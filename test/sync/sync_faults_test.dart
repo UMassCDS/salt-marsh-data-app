@@ -2,7 +2,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mass_marsh_app/services/sync_service.dart';
 import '../support/fake_backend.dart';
-import '../support/known_gap.dart';
 import '../support/sync_harness.dart';
 
 const outingsPath = '/api/mobile/field-outings';
@@ -117,9 +116,8 @@ void main() {
       expect((await harness.outing(outingId))['sync_status'], 'synced');
     });
 
-    knownGapTest(
+    test(
       'auto-sync also records the server ids of the plots',
-      'pre-check marks only the outing synced; plots stay pending with no server_id until a manual Resync',
       () async {
         await withFaults([const Fault(method: 'POST', path: outingsPath, kind: FaultKind.loseResponseAfterCommit)]);
         final outingId = await harness.insertOuting(localId: 'o-1');
@@ -145,9 +143,8 @@ void main() {
       await expectEverythingSynced(outingId, 'o-1');
     });
 
-    knownGapTest(
+    test(
       'a photo that failed on the same attempt still reaches the server',
-      'plot has no server_id so photo retry skips it; resync re-uploads it but add-records ignores photos on existing plots',
       () async {
         final photo = await writeTempPhoto();
         await withFaults([
@@ -165,6 +162,94 @@ void main() {
         expect(harness.backend.photoUrlByVegetationId[plotId], isNotNull);
       },
     );
+  });
+
+  group('recovering plots the app never got server ids for', () {
+    test('auto-sync recovers them even when the first recovery request also fails', () async {
+      await withFaults([
+        const Fault(method: 'POST', path: outingsPath, kind: FaultKind.loseResponseAfterCommit),
+        Fault(method: 'POST', path: RegExp(r'/vegetation-records$'), kind: FaultKind.dropBeforeServer),
+      ]);
+      final outingId = await harness.insertOuting(localId: 'o-1');
+
+      await harness.sync.uploadFieldOuting(outingId);
+      await harness.sync.uploadAllPendingOutings();
+      await harness.sync.uploadAllPendingOutings();
+
+      await expectEverythingSynced(outingId, 'o-1');
+      expect(harness.backend.sessionsByLocalId['o-1']!.vegetation, hasLength(2));
+      expect(harness.backend.serverCommitsTo('POST', outingsPath), 1);
+    });
+
+    test('a plot saved after its outing synced reaches the server through auto-sync', () async {
+      await withFaults([]);
+      final outingId = await harness.insertOuting(localId: 'o-1');
+      await harness.sync.uploadFieldOuting(outingId);
+      await (await harness.db).insert('vegetation_records', {
+        'local_id': 'o-1-veg-late',
+        'outing_id': outingId,
+        'transect_id': 'T1',
+        'plot_number': 9,
+        'latitude': 42.0,
+        'longitude': -71.0,
+        'species_observations': '[]',
+        'protocol_code': 'MassMarshVeg',
+      });
+
+      await harness.sync.uploadAllPendingOutings();
+
+      expect(harness.backend.sessionsByLocalId['o-1']!.vegetation, hasLength(3));
+      await expectEverythingSynced(outingId, 'o-1');
+    });
+
+    test('while recovery keeps failing the same photo is not uploaded again every sync', () async {
+      final photo = await writeTempPhoto();
+      await withFaults([
+        const Fault(method: 'POST', path: photosPath, kind: FaultKind.dropBeforeServer),
+        const Fault(method: 'POST', path: outingsPath, kind: FaultKind.loseResponseAfterCommit),
+        for (var i = 1; i <= 3; i++)
+          Fault(method: 'POST', path: RegExp(r'/vegetation-records$'), occurrence: i, kind: FaultKind.serverError),
+      ]);
+      final outingId = await harness.insertOuting(localId: 'o-1', photoPathForFirstPlot: photo);
+      await harness.sync.uploadFieldOuting(outingId);
+
+      for (var i = 0; i < 3; i++) {
+        await harness.sync.uploadAllPendingOutings();
+      }
+
+      expect(harness.backend.uploadedPhotos, isEmpty);
+
+      await harness.sync.uploadAllPendingOutings();
+
+      final plotId = harness.backend.serverPlotId('o-1', 'o-1-veg-1')!;
+      expect(harness.backend.uploadedPhotos, hasLength(1));
+      expect(harness.backend.photoUrlByVegetationId[plotId], harness.backend.uploadedPhotos.single);
+    });
+
+    test('a photo the server already has is not uploaded again after a lost reply', () async {
+      final photo = await writeTempPhoto();
+      await withFaults([const Fault(method: 'POST', path: outingsPath, kind: FaultKind.loseResponseAfterCommit)]);
+      final outingId = await harness.insertOuting(localId: 'o-1', photoPathForFirstPlot: photo);
+
+      await harness.sync.uploadFieldOuting(outingId);
+      await harness.sync.uploadAllPendingOutings();
+      await harness.sync.uploadAllPendingOutings();
+
+      expect(harness.backend.uploadedPhotos, hasLength(1));
+      expect(harness.backend.callsTo('PUT', RegExp(r'/photo$')), 0);
+      final plot = (await harness.vegetation(outingId)).first;
+      expect(plot['photo_filename'], harness.backend.uploadedPhotos.single);
+      expect(await harness.sync.getPendingPhotoUploadsCount(), 0);
+    });
+
+    test('a pending outing is not treated as having orphaned plots', () async {
+      await withFaults([const Fault(method: 'POST', path: outingsPath, kind: FaultKind.dropBeforeServer)]);
+      await harness.insertOuting(localId: 'o-1');
+
+      await harness.sync.uploadAllPendingOutings();
+
+      expect(harness.backend.callsTo('POST', RegExp(r'/vegetation-records$')), 0);
+    });
   });
 
   group('the duplicate check itself fails', () {
@@ -259,9 +344,8 @@ void main() {
       expect(retried['photo_upload_error'], isNull);
     });
 
-    knownGapTest(
+    test(
       'auto-sync retries a failed photo once nothing else is pending',
-      'uploadAllPendingOutings returns early when no outing is pending, before retryPendingPhotoUploads',
       () async {
         final outingId = await outingWithFailedPhoto();
 
