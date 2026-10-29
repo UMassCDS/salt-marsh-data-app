@@ -24,8 +24,11 @@ class Fault {
   });
 
   bool matches(String requestMethod, String requestPath, int count) =>
-      method == requestMethod && path.allMatches(requestPath).isNotEmpty && occurrence == count;
+      method == requestMethod && pathMatches(path, requestPath) && occurrence == count;
 }
+
+bool pathMatches(Pattern pattern, String path) =>
+    pattern is String ? pattern == path : pattern.allMatches(path).isNotEmpty;
 
 class ServerSession {
   final int id;
@@ -62,11 +65,10 @@ class FakeBackend implements HttpClientAdapter {
   int get sessionCount => sessionsByLocalId.length;
 
   int callsTo(String method, Pattern path) =>
-      requests.where((r) => r.method == method && path.allMatches(r.path).isNotEmpty).length;
+      requests.where((r) => r.method == method && pathMatches(path, r.path)).length;
 
-  int serverCommitsTo(String method, Pattern path) => requests
-      .where((r) => r.reachedServer && r.method == method && path.allMatches(r.path).isNotEmpty)
-      .length;
+  int serverCommitsTo(String method, Pattern path) =>
+      requests.where((r) => r.reachedServer && r.method == method && pathMatches(path, r.path)).length;
 
   @override
   void close({bool force = false}) {}
@@ -129,7 +131,30 @@ class FakeBackend implements HttpClientAdapter {
         _nextId++, localId, body, assign('vegetation_records'), assign('hydrology_records'), assign('elevation_records'),
       );
       sessionsByLocalId[localId] = session;
+      _storePhotoUrls(session, body['vegetation_records'] as List? ?? []);
       return _json(_uploadResponse(session, 'Field session uploaded successfully.'));
+    }
+
+    final addRecords = RegExp(r'^/api/mobile/field-outings/(\d+)/vegetation-records$').firstMatch(path);
+    if (method == 'POST' && addRecords != null) {
+      final serverId = int.parse(addRecords.group(1)!);
+      final session = sessionsByLocalId.values.where((s) => s.id == serverId).firstOrNull;
+      if (session == null) return _json({'detail': 'Field session not found'}, 404);
+      final records = (options.data['vegetation_records'] as List).cast<Map>();
+      final added = <Map>[];
+      for (final record in records) {
+        final localId = record['local_id'] as String;
+        if (session.vegetation.containsKey(localId)) continue;
+        session.vegetation[localId] = _nextId++;
+        added.add(record);
+      }
+      _storePhotoUrls(session, added);
+      return _json({
+        'success': true,
+        'child_records': {
+          'vegetation': {for (final r in records) r['local_id'] as String: session.vegetation[r['local_id']]},
+        },
+      });
     }
 
     if (method == 'POST' && path == '/api/mobile/photos') {
@@ -146,6 +171,16 @@ class FakeBackend implements HttpClientAdapter {
 
     return _json({'detail': 'FakeBackend has no route for $method $path'}, 404);
   }
+
+  // Like the real server, a plot that already exists keeps its photo even if a later request carries one
+  void _storePhotoUrls(ServerSession session, List records) {
+    for (final record in records.cast<Map>()) {
+      final url = record['photo_url'] as String?;
+      if (url != null) photoUrlByVegetationId[session.vegetation[record['local_id']]!] = url;
+    }
+  }
+
+  int? serverPlotId(String outingLocalId, String plotLocalId) => sessionsByLocalId[outingLocalId]?.vegetation[plotLocalId];
 
   Map<String, dynamic> _uploadResponse(ServerSession s, String message) => {
         'success': true,
