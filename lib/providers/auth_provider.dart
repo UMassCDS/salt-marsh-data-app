@@ -7,6 +7,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/user/user.dart';
 import '../services/app_logger.dart';
 import '../services/auth_cache.dart';
+import '../services/auth_rejection.dart';
 import '../services/auth_service.dart';
 import '../services/sync_service.dart';
 
@@ -74,8 +75,26 @@ class AuthNotifier extends Notifier<AuthState> {
 
   @override
   AuthState build() {
+    final rejections = AuthRejections.instance.stream.listen((_) => _onSessionRejected());
+    ref.onDispose(rejections.cancel);
     _tryRestoreSession();
     return const AuthState();
+  }
+
+  // Local data is never touched here: signing in again resumes syncing it
+  Future<void> _onSessionRejected() async {
+    if (!state.isAuthenticated) return;
+    appLogger.w('[auth] sync was rejected with 401, ending the session and keeping local data');
+    await _endSession(
+      message: 'Your session expired. Sign in again to finish syncing - nothing on this device was lost.',
+    );
+  }
+
+  Future<void> _endSession({String? message}) async {
+    await _storage.delete(key: _tokenKey);
+    await AuthCache.clear();
+    SyncService.instance.clearAuthToken();
+    state = AuthState(isInitialized: true, error: message);
   }
 
   AuthService get _authService => ref.read(authServiceProvider);
@@ -123,10 +142,7 @@ class AuthNotifier extends Notifier<AuthState> {
     } on DioException catch (e) {
       if (_isAuthRejection(e)) {
         appLogger.w('[auth] restore: server rejected token (${e.response?.statusCode}), signing out');
-        await _storage.delete(key: _tokenKey);
-        await AuthCache.clear();
-        SyncService.instance.clearAuthToken();
-        state = const AuthState(isInitialized: true);
+        await _endSession();
         return;
       }
       // Any other failure - timeout, no connection, 5xx - is not proof the
@@ -183,12 +199,7 @@ class AuthNotifier extends Notifier<AuthState> {
     }
   }
 
-  Future<void> logout() async {
-    await _storage.delete(key: _tokenKey);
-    await AuthCache.clear();
-    SyncService.instance.clearAuthToken();
-    state = const AuthState(isInitialized: true);
-  }
+  Future<void> logout() => _endSession();
 }
 
 final authServiceProvider = Provider<AuthService>((ref) => AuthService());

@@ -8,6 +8,7 @@ import '../config/env.dart';
 import '../database/app_database.dart';
 import 'app_logger.dart';
 import 'auth_cache.dart';
+import 'auth_rejection.dart';
 import 'sync_log.dart';
 
 class ResyncResult {
@@ -43,6 +44,7 @@ class SyncService {
   final Logger _logger;
   final Connectivity _connectivity;
   final SyncLog? _syncLog;
+  final AuthRejections _authRejections;
 
   /// Base URL for the API (should be configured per environment)
   late final String _baseUrl;
@@ -68,11 +70,13 @@ class SyncService {
     required Connectivity connectivity,
     required String baseUrl,
     SyncLog? syncLog,
+    AuthRejections? authRejections,
   })  : _dio = dio,
         _db = db,
         _logger = logger,
         _connectivity = connectivity,
         _syncLog = syncLog,
+        _authRejections = authRejections ?? AuthRejections.instance,
         _baseUrl = baseUrl {
     _configureClient();
   }
@@ -84,6 +88,7 @@ class SyncService {
     required Connectivity connectivity,
     String baseUrl = 'http://test.invalid',
     SyncLog? syncLog,
+    AuthRejections? authRejections,
   }) =>
       SyncService._(
         dio: dio,
@@ -92,6 +97,7 @@ class SyncService {
         connectivity: connectivity,
         baseUrl: baseUrl,
         syncLog: syncLog,
+        authRejections: authRejections ?? AuthRejections(),
       );
 
   /// Get or create singleton instance
@@ -137,6 +143,8 @@ class SyncService {
           }
         },
         onError: (error, handler) async {
+          // 403 means signed in but not allowed, which signing in again would not fix
+          if (error.response?.statusCode == 401 && _authToken != null) _authRejections.report();
           try {
             await _logRequest(error.requestOptions, error: error);
           } catch (_) {
@@ -926,6 +934,7 @@ class SyncService {
   /// Set authentication token for API requests
   void setAuthToken(String token) {
     _authToken = token;
+    _authRejections.rearm();
   }
 
   /// Clear authentication token
