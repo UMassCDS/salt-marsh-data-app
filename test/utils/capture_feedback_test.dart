@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mass_marsh_app/utils/capture_feedback.dart';
+import 'package:mass_marsh_app/utils/gps_quality.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -24,21 +25,27 @@ void main() {
   });
 
   test('a good fix plays a gentle click and a light tap', () async {
-    await playCaptureFeedback('gps_good');
+    await playCaptureFeedback(gpsTierGood);
 
     expect(played, ['sound:SystemSoundType.click', 'haptic:HapticFeedbackType.lightImpact']);
   });
 
   test('a fair fix sounds the same as a good one', () async {
-    await playCaptureFeedback('gps_fair');
+    await playCaptureFeedback(gpsTierFair);
 
     expect(played, ['sound:SystemSoundType.click', 'haptic:HapticFeedbackType.lightImpact']);
   });
 
   test('a coarse fix is a stronger tap with no confirming sound, so it prompts a look at the screen', () async {
-    await playCaptureFeedback('coarse');
+    await playCaptureFeedback(gpsTierCoarse);
 
     expect(played, ['haptic:HapticFeedbackType.mediumImpact']);
+  });
+
+  test('no fix at all is a firm tap, so someone not watching the screen knows to retry', () async {
+    await playCaptureFailedFeedback();
+
+    expect(played, ['haptic:HapticFeedbackType.heavyImpact']);
   });
 
   test('a platform that rejects feedback never throws', () async {
@@ -47,6 +54,7 @@ void main() {
       (call) async => throw PlatformException(code: 'unavailable'),
     );
 
-    await playCaptureFeedback('gps_good');
+    await playCaptureFeedback(gpsTierGood);
+    await playCaptureFailedFeedback();
   });
 }
