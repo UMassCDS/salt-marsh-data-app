@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mass_marsh_app/database/app_database.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import '../support/known_gap.dart';
+import '../support/sync_harness.dart' show useInMemorySqlite;
 
 const currentVersion = 10;
 const oldVersions = [1, 2, 3, 4, 5, 6, 7, 8, 9];
@@ -30,25 +32,23 @@ const knownGaps = <String, Map<int, String>>{
   },
 };
 
-void versionTest(String name, int version, Future<void> Function() body) {
+// Arrange runs outside the gap check so a broken fixture fails loudly instead of passing as the gap
+void versionTest(
+  String name,
+  int version,
+  Future<String> Function() arrange,
+  Future<void> Function(String path) verify,
+) {
   final gap = knownGaps[name]?[version];
-  test(name, () async {
-    if (gap == null) return body();
-    var failed = false;
-    try {
-      await body();
-    } catch (_) {
-      failed = true;
-    }
-    if (!failed) fail('Known gap now passes, remove it from knownGaps: $gap');
+  test(gap == null ? name : '$name [known gap]', () async {
+    final path = await arrange();
+    if (gap == null) return verify(path);
+    await expectKnownGap(gap, () => verify(path), isExpected: (e) => e is TestFailure || e is DatabaseException);
   });
 }
 
 void main() {
-  setUpAll(() {
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
-  });
+  setUpAll(useInMemorySqlite);
 
   late Directory dir;
 
@@ -143,8 +143,11 @@ void main() {
     for (final table in tables) {
       final name = table['name'] as String;
       final columns = await db.rawQuery('PRAGMA table_info($name)');
+      final foreignKeys = await db.rawQuery('PRAGMA foreign_key_list($name)');
       schema[name] = [
-        for (final c in columns) '${c['name']} ${(c['type'] as String).toUpperCase()} notnull=${c['notnull']} pk=${c['pk']}',
+        for (final c in columns)
+          '${c['name']} ${(c['type'] as String).toUpperCase()} notnull=${c['notnull']} pk=${c['pk']} default=${c['dflt_value']}',
+        for (final fk in foreignKeys) 'fk ${fk['from']} -> ${fk['table']}.${fk['to']} on_delete=${fk['on_delete']}',
       ]..sort();
     }
     return schema;
@@ -157,6 +160,14 @@ void main() {
     return {for (final r in rows) r['name'] as String};
   }
 
+  Future<String> oldDatabase(int version, {bool seeded = true}) async {
+    final path = newPath('old');
+    final old = await createOldDatabase(path, version);
+    if (seeded) await seedField(old);
+    await old.close();
+    return path;
+  }
+
   Future<AppDatabase> upgrade(String path) async {
     final appDb = AppDatabase.forTesting(path: path);
     await appDb.database;
@@ -166,12 +177,7 @@ void main() {
   group('upgrading an old database', () {
     for (final version in oldVersions) {
       group('from v$version', () {
-        versionTest('same schema as a fresh install', version, () async {
-          final oldPath = newPath('old');
-          final old = await createOldDatabase(oldPath, version);
-          await seedField(old);
-          await old.close();
-
+        versionTest('same schema as a fresh install', version, () => oldDatabase(version), (oldPath) async {
           final upgraded = await upgrade(oldPath);
           final fresh = await upgrade(newPath('fresh'));
           addTearDown(upgraded.close);
@@ -184,12 +190,7 @@ void main() {
           expect(await indexNames(upgradedDb), await indexNames(freshDb));
         });
 
-        versionTest('keeps the existing rows', version, () async {
-          final oldPath = newPath('old');
-          final old = await createOldDatabase(oldPath, version);
-          await seedField(old);
-          await old.close();
-
+        versionTest('keeps the existing rows', version, () => oldDatabase(version), (oldPath) async {
           final upgraded = await upgrade(oldPath);
           addTearDown(upgraded.close);
           final db = await upgraded.database;
@@ -212,11 +213,7 @@ void main() {
           expect((await db.query('elevation_records')).single['elevation_navd88_m'], 1.5);
         });
 
-        versionTest('accepts new rows afterwards', version, () async {
-          final oldPath = newPath('old');
-          final old = await createOldDatabase(oldPath, version);
-          await old.close();
-
+        versionTest('accepts new rows afterwards', version, () => oldDatabase(version, seeded: false), (oldPath) async {
           final upgraded = await upgrade(oldPath);
           addTearDown(upgraded.close);
           final db = await upgraded.database;
