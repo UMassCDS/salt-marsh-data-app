@@ -8,6 +8,7 @@ import '../config/env.dart';
 import '../database/app_database.dart';
 import 'app_logger.dart';
 import 'auth_cache.dart';
+import 'sync_log.dart';
 
 class ResyncResult {
   final bool alreadyOnServer;
@@ -41,6 +42,7 @@ class SyncService {
   final AppDatabase _db;
   final Logger _logger;
   final Connectivity _connectivity;
+  final SyncLog? _syncLog;
 
   /// Base URL for the API (should be configured per environment)
   late final String _baseUrl;
@@ -65,10 +67,12 @@ class SyncService {
     required Logger logger,
     required Connectivity connectivity,
     required String baseUrl,
+    SyncLog? syncLog,
   })  : _dio = dio,
         _db = db,
         _logger = logger,
         _connectivity = connectivity,
+        _syncLog = syncLog,
         _baseUrl = baseUrl {
     _configureClient();
   }
@@ -79,8 +83,16 @@ class SyncService {
     required AppDatabase db,
     required Connectivity connectivity,
     String baseUrl = 'http://test.invalid',
+    SyncLog? syncLog,
   }) =>
-      SyncService._(dio: dio, db: db, logger: appLogger, connectivity: connectivity, baseUrl: baseUrl);
+      SyncService._(
+        dio: dio,
+        db: db,
+        logger: appLogger,
+        connectivity: connectivity,
+        baseUrl: baseUrl,
+        syncLog: syncLog,
+      );
 
   /// Get or create singleton instance
   static SyncService get instance {
@@ -90,6 +102,7 @@ class SyncService {
       logger: appLogger,
       connectivity: Connectivity(),
       baseUrl: kApiBaseUrl,
+      syncLog: SyncLog.persistent,
     );
     return _instance!;
   }
@@ -99,6 +112,23 @@ class SyncService {
     _dio.options.baseUrl = _baseUrl;
     _dio.options.connectTimeout = const Duration(seconds: 60);
     _dio.options.receiveTimeout = const Duration(seconds: 60);
+
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          options.extra['sync_log_started_at'] = DateTime.now();
+          handler.next(options);
+        },
+        onResponse: (response, handler) async {
+          await _logRequest(response.requestOptions, response: response);
+          handler.next(response);
+        },
+        onError: (error, handler) async {
+          await _logRequest(error.requestOptions, error: error);
+          handler.next(error);
+        },
+      ),
+    );
 
     // Add interceptors for auth and logging
     _dio.interceptors.add(
@@ -126,6 +156,24 @@ class SyncService {
         },
       ),
     );
+  }
+
+  Future<void> _logRequest(RequestOptions options, {Response? response, DioException? error}) async {
+    final log = _syncLog;
+    if (log == null) return;
+    final startedAt = options.extra['sync_log_started_at'] as DateTime? ?? DateTime.now();
+    final status = response?.statusCode ?? error?.response?.statusCode;
+    final outcome = error != null ? (error.response != null ? 'http_error' : error.type.name) : 'ok';
+    final networks = await _connectivity.checkConnectivity();
+    await log.record(SyncLogEntry(
+      time: startedAt,
+      method: options.method,
+      path: options.path,
+      network: networks.map((n) => n.name).join('+'),
+      durationMs: DateTime.now().difference(startedAt).inMilliseconds,
+      outcome: outcome,
+      status: status,
+    ));
   }
 
   Map<String, dynamic> _vegRecordPayload(Map<String, dynamic> veg, String? photoUrl) {

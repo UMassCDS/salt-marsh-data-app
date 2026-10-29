@@ -9,6 +9,7 @@ import 'package:sqflite/sqflite.dart';
 
 import '../database/app_database.dart';
 import '../services/app_logger.dart';
+import '../services/sync_log.dart';
 
 class OutingSummary {
   final int? id;
@@ -230,6 +231,9 @@ class DatabaseExportHelper {
 
       final logFile = File(p.join(stagingDir.path, 'recent_log.txt'));
       await logFile.writeAsString(dumpRecentLogs());
+
+      final syncLogFile = File(p.join(stagingDir.path, 'sync_log.txt'));
+      await syncLogFile.writeAsString(await SyncLog.persistent.dump());
 
       final zipPath = p.join(
           docsDir.path,
