@@ -75,7 +75,7 @@ class AppDatabase {
 
   /// Initialize database
   Future<Database> _initDatabase() async {
-    final path = _pathOverride ?? join(await getDatabasesPath(), _dbName);
+    final path = await getDatabasePath();
 
     return openDatabase(
       path,
@@ -426,8 +426,7 @@ class AppDatabase {
   /// // Share file using share_plus or file_picker
   /// ```
   Future<File> exportDatabase() async {
-    final dbPath = await getDatabasesPath();
-    final dbFile = File(join(dbPath, _dbName));
+    final dbFile = File(await getDatabasePath());
 
     // Auto-sync and background sync both open their own queries against this
     // database - paused around the close/reopen below so they can't hit a
@@ -473,8 +472,7 @@ class AppDatabase {
   /// await AppDatabase.instance.importDatabase(pickedFilePath);
   /// ```
   Future<void> importDatabase(String importPath) async {
-    final dbPath = await getDatabasesPath();
-    final targetPath = join(dbPath, _dbName);
+    final targetPath = await getDatabasePath();
 
     SyncService.instance.stopAutoSync();
     try {
@@ -500,8 +498,5 @@ class AppDatabase {
   /// Get the current database file path.
   ///
   /// Useful for debugging or advanced file operations.
-  Future<String> getDatabasePath() async {
-    final dbPath = await getDatabasesPath();
-    return join(dbPath, _dbName);
-  }
+  Future<String> getDatabasePath() async => _pathOverride ?? join(await getDatabasesPath(), _dbName);
 }
