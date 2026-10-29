@@ -15,6 +15,7 @@ import '../../providers/org_provider.dart';
 import '../../services/draft_autosave.dart';
 import '../../services/species_service.dart';
 import '../../services/protocol_service.dart';
+import '../../utils/capture_feedback.dart';
 import '../../utils/gps_quality.dart';
 import '../../utils/id_utils.dart';
 import '../../utils/photo_storage.dart';
@@ -615,6 +616,7 @@ class _FormScreenState extends ConsumerState<FormScreen>
           _gpsCapturing.remove(plotLocalId);
           _gpsLiveAccuracy.remove(plotLocalId);
         });
+        unawaited(playCaptureFailedFeedback());
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Could not get a GPS fix - try again in the open')),
@@ -640,7 +642,8 @@ class _FormScreenState extends ConsumerState<FormScreen>
       });
       if (index == null) return; // plot was deleted mid-capture
       _onEdited();
-      if (tier == 'coarse' && mounted) {
+      unawaited(playCaptureFeedback(tier));
+      if (tier == gpsTierCoarse && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(
               'GPS fix is coarse (±${position.accuracy.toStringAsFixed(0)}m) - ${qualityHint(tier)}')),

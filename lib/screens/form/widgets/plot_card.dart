@@ -258,13 +258,13 @@ class PlotCard extends StatelessWidget {
                           children: [
                             Chip(
                               avatar: Icon(
-                                tier == 'gps_good'
+                                tier == gpsTierGood
                                     ? Icons.check_circle
-                                    : (tier == 'gps_fair' ? Icons.info : Icons.warning),
+                                    : (tier == gpsTierFair ? Icons.info : Icons.warning),
                                 size: 18,
-                                color: tier == 'gps_good'
+                                color: tier == gpsTierGood
                                     ? Colors.green
-                                    : (tier == 'gps_fair' ? Colors.orange : Colors.red),
+                                    : (tier == gpsTierFair ? Colors.orange : Colors.red),
                               ),
                               label: Text(
                                 '±${plot.accuracyM!.toStringAsFixed(0)} m · ${qualityLabel(tier ?? '')}',
@@ -277,7 +277,7 @@ class PlotCard extends StatelessWidget {
                                 child: Text(
                                   qualityHint(tier ?? '')!,
                                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                        color: tier == 'coarse' ? Colors.red.shade700 : Colors.orange.shade800,
+                                        color: tier == gpsTierCoarse ? Colors.red.shade700 : Colors.orange.shade800,
                                       ),
                                 ),
                               ),
