@@ -50,6 +50,7 @@ app.*.map.json
 
 # SQL files
 *.sql
+!test/fixtures/db_schemas/*.sql
 
 # Flutter
 .flutter-plugins-dependencies
