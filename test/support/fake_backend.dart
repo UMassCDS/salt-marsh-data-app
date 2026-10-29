@@ -141,18 +141,17 @@ class FakeBackend implements HttpClientAdapter {
       final session = sessionsByLocalId.values.where((s) => s.id == serverId).firstOrNull;
       if (session == null) return _json({'detail': 'Field session not found'}, 404);
       final records = (options.data['vegetation_records'] as List).cast<Map>();
-      final added = <Map>[];
       for (final record in records) {
-        final localId = record['local_id'] as String;
-        if (session.vegetation.containsKey(localId)) continue;
-        session.vegetation[localId] = _nextId++;
-        added.add(record);
+        session.vegetation.putIfAbsent(record['local_id'] as String, () => _nextId++);
       }
-      _storePhotoUrls(session, added);
+      _storePhotoUrls(session, records);
       return _json({
         'success': true,
         'child_records': {
           'vegetation': {for (final r in records) r['local_id'] as String: session.vegetation[r['local_id']]},
+        },
+        'vegetation_photos': {
+          for (final r in records) r['local_id'] as String: photoUrlByVegetationId[session.vegetation[r['local_id']]],
         },
       });
     }
@@ -172,11 +171,11 @@ class FakeBackend implements HttpClientAdapter {
     return _json({'detail': 'FakeBackend has no route for $method $path'}, 404);
   }
 
-  // Like the real server, a plot that already exists keeps its photo even if a later request carries one
+  // Like the real server, a later request can attach a missing photo but never replaces one
   void _storePhotoUrls(ServerSession session, List records) {
     for (final record in records.cast<Map>()) {
       final url = record['photo_url'] as String?;
-      if (url != null) photoUrlByVegetationId[session.vegetation[record['local_id']]!] = url;
+      if (url != null) photoUrlByVegetationId.putIfAbsent(session.vegetation[record['local_id']]!, () => url);
     }
   }
 

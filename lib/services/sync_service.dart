@@ -503,11 +503,6 @@ class SyncService {
         orderBy: 'created_at ASC',
       );
 
-      if (pendingOutings.isEmpty) {
-        _logger.i('No pending outings to upload');
-        return 0;
-      }
-
       int successCount = 0;
 
       for (final outing in pendingOutings) {
@@ -517,7 +512,12 @@ class SyncService {
         }
       }
 
-      _logger.i('Uploaded $successCount/${pendingOutings.length} pending outings');
+      if (pendingOutings.isNotEmpty) {
+        _logger.i('Uploaded $successCount/${pendingOutings.length} pending outings');
+      }
+
+      // Runs even with nothing pending: a lost reply or a plot saved after sync leaves plots without server ids
+      await _recoverOrphanedPlots();
 
       // Synced outings can still have a failed photo, so they need a separate pass
       await retryPendingPhotoUploads();
@@ -526,6 +526,18 @@ class SyncService {
     } catch (e) {
       _logger.e('Error uploading pending outings: $e');
       return 0;
+    }
+  }
+
+  Future<void> _recoverOrphanedPlots() async {
+    final db = await _db.database;
+    final outings = await db.rawQuery('''
+      SELECT DISTINCT o.id, o.server_id FROM field_outings o
+      JOIN vegetation_records v ON v.outing_id = o.id
+      WHERE o.sync_status = 'synced' AND o.server_id IS NOT NULL AND v.server_id IS NULL
+    ''');
+    for (final outing in outings) {
+      await _addMissingVegetationRecords(outing['id'] as int, outing['server_id'] as int);
     }
   }
 
@@ -680,36 +692,29 @@ class SyncService {
     );
     if (orphaned.isEmpty) return 0;
 
-    final photoUrls = <String, String>{};
-    for (final veg in orphaned) {
-      final localPath = veg['photo_local_path'] as String?;
-      final localId = veg['local_id'] as String? ?? '';
-      if (localPath != null && localPath.isNotEmpty) {
-        final (url, _) = await _uploadPhoto(localPath);
-        if (url != null) photoUrls[localId] = url;
-      }
-    }
-
+    // Photos go afterwards via retryPendingPhotoUploads, so a request that keeps failing never re-uploads them
     try {
       final response = await _dio.post(
         '/api/mobile/field-outings/$serverId/vegetation-records',
         data: {
           'protocol_code': orphaned.first['protocol_code'],
-          'vegetation_records': orphaned
-              .map((veg) => _vegRecordPayload(veg, photoUrls[veg['local_id'] as String? ?? '']))
-              .toList(),
+          'vegetation_records': orphaned.map((veg) => _vegRecordPayload(veg, null)).toList(),
         },
       );
       if (response.statusCode != 200 || response.data['success'] != true) return 0;
 
       final ids = (response.data['child_records']['vegetation'] as Map<String, dynamic>);
+      // Older backends omit this; then the photo is simply uploaded again by the retry pass
+      final serverPhotos = (response.data['vegetation_photos'] as Map<String, dynamic>?) ?? const {};
       for (final entry in ids.entries) {
+        final serverPhoto = serverPhotos[entry.key] as String?;
         await db.update(
           'vegetation_records',
           {
             'server_id': entry.value,
             'sync_status': 'synced',
-            if (photoUrls.containsKey(entry.key)) 'photo_filename': photoUrls[entry.key],
+            'photo_filename': ?serverPhoto,
+            if (serverPhoto != null) 'photo_upload_error': null,
           },
           where: 'local_id = ?',
           whereArgs: [entry.key],
