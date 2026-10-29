@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mass_marsh_app/database/app_database.dart';
+import 'package:mass_marsh_app/services/sync_log.dart';
 import 'package:mass_marsh_app/services/sync_service.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:sqflite/sqflite.dart' show Sqflite;
@@ -22,13 +23,13 @@ class SyncHarness {
 
   SyncHarness._(this.appDb, this.backend, this.connectivity, this.sync);
 
-  static Future<SyncHarness> create({List<Fault> faults = const []}) async {
+  static Future<SyncHarness> create({List<Fault> faults = const [], SyncLog? syncLog}) async {
     final appDb = AppDatabase.forTesting(path: inMemoryDatabasePath);
     await appDb.database;
     final backend = FakeBackend(faults: faults);
     final connectivity = FakeConnectivity();
     final dio = Dio()..httpClientAdapter = backend;
-    final sync = SyncService.forTesting(dio: dio, db: appDb, connectivity: connectivity);
+    final sync = SyncService.forTesting(dio: dio, db: appDb, connectivity: connectivity, syncLog: syncLog);
     return SyncHarness._(appDb, backend, connectivity, sync);
   }
 
