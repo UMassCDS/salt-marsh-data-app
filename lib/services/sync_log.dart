@@ -59,6 +59,8 @@ class SyncLog {
   final Duration retention;
   final DateTime Function() _clock;
   bool _prunedThisSession = false;
+  // Serialized so a prune rewrite can never overwrite an append that raced it
+  Future<void> _writes = Future.value();
 
   SyncLog({
     required Future<File> Function() fileProvider,
@@ -72,7 +74,13 @@ class SyncLog {
     return File(p.join(dir.path, 'sync_log.jsonl'));
   });
 
-  Future<void> record(SyncLogEntry entry) async {
+  Future<void> record(SyncLogEntry entry) {
+    final write = _writes.then((_) => _append(entry));
+    _writes = write;
+    return write;
+  }
+
+  Future<void> _append(SyncLogEntry entry) async {
     try {
       final file = await _fileProvider();
       if (!_prunedThisSession) {
@@ -109,6 +117,9 @@ class SyncLog {
         .map((line) => (line: line, entry: SyncLogEntry.tryParse(line)))
         .where((r) => r.entry != null && r.entry!.time.isAfter(cutoff))
         .map((r) => r.line);
-    await file.writeAsString(kept.isEmpty ? '' : '${kept.join('\n')}\n');
+    // Rename is atomic, so being killed mid-prune leaves the old log rather than a truncated one
+    final temp = File('${file.path}.tmp');
+    await temp.writeAsString(kept.isEmpty ? '' : '${kept.join('\n')}\n', flush: true);
+    await temp.rename(file.path);
   }
 }

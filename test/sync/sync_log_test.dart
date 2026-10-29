@@ -55,6 +55,23 @@ void main() {
       expect(paths, ['/recent', '/new']);
     });
 
+    test('writes that arrive while old entries are being pruned are not lost', () async {
+      final now = DateTime(2026, 10, 29, 12);
+      final seed = newLog();
+      for (var i = 0; i < 200; i++) {
+        await seed.record(entry(now.subtract(Duration(days: 20, minutes: i)), path: '/old'));
+      }
+      await seed.record(entry(now.subtract(const Duration(days: 1)), path: '/kept'));
+
+      final log = newLog(clock: () => now);
+      await Future.wait([for (var i = 0; i < 20; i++) log.record(entry(now, path: '/new-$i'))]);
+
+      final paths = (await newLog().entries()).map((e) => e.path).toList();
+      expect(paths.where((p) => p == '/old'), isEmpty);
+      expect(paths, contains('/kept'));
+      expect(paths.where((p) => p.startsWith('/new-')), hasLength(20));
+    });
+
     test('ignores corrupt lines instead of failing', () async {
       await logFile.writeAsString('not json\n');
       await newLog().record(entry(DateTime.now()));
