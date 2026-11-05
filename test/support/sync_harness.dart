@@ -18,11 +18,13 @@ void useInMemorySqlite() {
 
 class SyncHarness {
   final AppDatabase appDb;
-  final FakeBackend backend;
+  final FakeBackend? _backend;
   final FakeConnectivity connectivity;
   final SyncService sync;
 
-  SyncHarness._(this.appDb, this.backend, this.connectivity, this.sync);
+  SyncHarness._(this.appDb, this._backend, this.connectivity, this.sync);
+
+  FakeBackend get backend => _backend ?? (throw StateError('This harness talks to a real backend, so there is no fake one to inspect'));
 
   static Future<SyncHarness> create({List<Fault> faults = const [], SyncLog? syncLog, AuthRejections? authRejections}) async {
     final appDb = AppDatabase.forTesting(path: inMemoryDatabasePath);
@@ -38,6 +40,14 @@ class SyncHarness {
       authRejections: authRejections,
     );
     return SyncHarness._(appDb, backend, connectivity, sync);
+  }
+
+  static Future<SyncHarness> createLive({required String baseUrl, required String token}) async {
+    final appDb = AppDatabase.forTesting(path: inMemoryDatabasePath);
+    await appDb.database;
+    final connectivity = FakeConnectivity();
+    final sync = SyncService.forTesting(dio: Dio(), db: appDb, connectivity: connectivity, baseUrl: baseUrl)..setAuthToken(token);
+    return SyncHarness._(appDb, null, connectivity, sync);
   }
 
   Future<Database> get db => appDb.database;
