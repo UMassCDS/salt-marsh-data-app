@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import '../config/env.dart';
 import '../models/user/user.dart';
+import 'app_version_interceptor.dart';
 
 class AuthService {
   final Dio _dio;
@@ -13,7 +14,7 @@ class AuthService {
             receiveTimeout: const Duration(seconds: 30),
             headers: {'Content-Type': 'application/json'},
           ),
-        );
+        )..interceptors.add(AppVersionInterceptor());
 
   /// POST /api/v1/auth/login
   /// Returns the JWT token and authenticated User.

@@ -8,6 +8,7 @@ import '../config/env.dart';
 import '../database/app_database.dart';
 import 'app_logger.dart';
 import 'auth_cache.dart';
+import 'app_version_interceptor.dart';
 import 'auth_rejection.dart';
 import 'sync_log.dart';
 
@@ -45,6 +46,7 @@ class SyncService {
   final Connectivity _connectivity;
   final SyncLog? _syncLog;
   final AuthRejections _authRejections;
+  final Future<String> Function()? _loadAppVersion;
 
   /// Base URL for the API (should be configured per environment)
   late final String _baseUrl;
@@ -71,12 +73,14 @@ class SyncService {
     required String baseUrl,
     SyncLog? syncLog,
     AuthRejections? authRejections,
+    Future<String> Function()? loadAppVersion,
   })  : _dio = dio,
         _db = db,
         _logger = logger,
         _connectivity = connectivity,
         _syncLog = syncLog,
         _authRejections = authRejections ?? AuthRejections.instance,
+        _loadAppVersion = loadAppVersion,
         _baseUrl = baseUrl {
     _configureClient();
   }
@@ -89,6 +93,7 @@ class SyncService {
     String baseUrl = 'http://test.invalid',
     SyncLog? syncLog,
     AuthRejections? authRejections,
+    Future<String> Function()? loadAppVersion,
   }) =>
       SyncService._(
         dio: dio,
@@ -98,6 +103,7 @@ class SyncService {
         baseUrl: baseUrl,
         syncLog: syncLog,
         authRejections: authRejections ?? AuthRejections(),
+        loadAppVersion: loadAppVersion ?? () async => 'test',
       );
 
   /// Get or create singleton instance
@@ -119,6 +125,7 @@ class SyncService {
     _dio.options.connectTimeout = const Duration(seconds: 60);
     _dio.options.receiveTimeout = const Duration(seconds: 60);
 
+    _dio.interceptors.add(AppVersionInterceptor(loadVersion: _loadAppVersion));
     _dio.interceptors.add(
       InterceptorsWrapper(
         // Every path must reach handler.next, or the request hangs and its outing stays locked as uploading
