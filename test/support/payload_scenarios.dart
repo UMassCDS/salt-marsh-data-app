@@ -84,7 +84,7 @@ final payloadScenarios = <PayloadScenario>[
     final db = await h.db;
     final id = await _outing(db, 'uas-outing', {'other_members': 'Pat Lee'});
     await _plot(db, id, 'uas-plot-1', {
-      'transect_id': null,
+      'transect_id': '',
       'protocol_code': 'UASCommunity',
       'subclass': 'High Marsh - Spartina patens dom.',
       'rtk_point_number': 'RTK-0042',
