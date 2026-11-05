@@ -6,6 +6,8 @@ enum FaultKind {
   dropBeforeServer,
   loseResponseAfterCommit,
   serverError,
+  unauthorized,
+  forbidden,
 }
 
 class Fault {
@@ -92,6 +94,11 @@ class FakeBackend implements HttpClientAdapter {
     if (fault?.kind == FaultKind.serverError) {
       requests.add(RecordedRequest(method, path, options.data, false));
       return _json({'detail': 'injected server error'}, 500);
+    }
+    if (fault?.kind == FaultKind.unauthorized || fault?.kind == FaultKind.forbidden) {
+      requests.add(RecordedRequest(method, path, options.data, false));
+      final unauthorized = fault!.kind == FaultKind.unauthorized;
+      return _json({'detail': unauthorized ? 'Not authenticated' : 'Requires contributor permission'}, unauthorized ? 401 : 403);
     }
 
     requests.add(RecordedRequest(method, path, options.data, true));
