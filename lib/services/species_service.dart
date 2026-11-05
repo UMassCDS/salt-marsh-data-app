@@ -20,6 +20,13 @@ class SpeciesItem {
   String get label => commonName != null ? '$code – $commonName' : code;
 }
 
+Map<String, Object?> speciesCacheRow(Map<String, dynamic> item) => {
+      'species_code': item['species_code'] as String,
+      'scientific_name': item['scientific_name'] as String,
+      'common_name': item['common_name'] as String?,
+      'active': 1,
+    };
+
 class SpeciesService {
   static final SpeciesService instance = SpeciesService._();
   SpeciesService._();
@@ -68,16 +75,7 @@ class SpeciesService {
     final db = await AppDatabase.instance.database;
     final batch = db.batch();
     for (final item in raw) {
-      batch.insert(
-        'species_lookup',
-        {
-          'species_code': item['species_code'] as String,
-          'scientific_name': item['scientific_name'] as String,
-          'common_name': item['common_name'] as String?,
-          'active': 1,
-        },
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
+      batch.insert('species_lookup', speciesCacheRow(item as Map<String, dynamic>), conflictAlgorithm: ConflictAlgorithm.replace);
     }
     await batch.commit(noResult: true);
   }

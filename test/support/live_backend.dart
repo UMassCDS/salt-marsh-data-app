@@ -30,6 +30,28 @@ class LiveBackend {
     if (response.statusCode != 200) throw StateError('Deleting session $sessionId failed: ${response.statusCode} ${response.data}');
   }
 
+  Future<Map<String, dynamic>> _getJson(String path, {String? token}) async {
+    final response = await _dio.get(path, options: token == null ? null : _as(token));
+    if (response.statusCode != 200) throw StateError('GET $path failed: ${response.statusCode} ${response.data}');
+    return (response.data as Map).cast<String, dynamic>();
+  }
+
+  Future<List<Map<String, dynamic>>> species() async =>
+      ((await _getJson('/api/mobile/species'))['species'] as List).cast<Map<String, dynamic>>();
+
+  Future<Map<String, dynamic>> mobileProtocol(int orgId) => _getJson('/api/mobile/orgs/$orgId/protocol');
+
+  Future<Map<String, dynamic>> protocolSettings(String token, int orgId) => _getJson('/api/v1/orgs/$orgId/protocol', token: token);
+
+  Future<void> setProtocol(String token, int orgId, String code, {List<String>? subclassOptions}) async {
+    final response = await _dio.patch(
+      '/api/v1/orgs/$orgId/protocol',
+      data: {'protocol_code': code, 'subclass_options': ?subclassOptions},
+      options: _as(token),
+    );
+    if (response.statusCode != 200) throw StateError('Setting protocol $code failed: ${response.statusCode} ${response.data}');
+  }
+
   Future<Map<String, dynamic>> syncStatus(String token, List<String> localIds) async {
     final response = await _dio.post('/api/mobile/sync-status', data: {'local_ids': localIds}, options: _as(token));
     return (response.data['records'] as Map).cast<String, dynamic>();
