@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import '../support/live_backend.dart';
 import '../support/live_env.dart';
 import '../support/live_faults.dart';
 import '../support/sync_harness.dart';
@@ -8,46 +7,27 @@ void main() {
   setUpAll(useInMemorySqlite);
 
   group('recovery against a real backend', skip: skipWithoutBackend, () {
-    late LiveBackend backend;
-    late String contributorToken;
-    late String managerToken;
-    late String viewerToken;
-    late int orgId;
-    final run = DateTime.now().millisecondsSinceEpoch;
+    late LiveRun live;
 
-    setUpAll(() async {
-      backend = LiveBackend(baseUrl!);
-      contributorToken = await backend.login(contributor.$1, contributor.$2);
-      managerToken = await backend.login(manager.$1, manager.$2);
-      viewerToken = await backend.login(viewer.$1, viewer.$2);
-      orgId = await backend.firstOrganizationId(contributorToken);
-    });
-
-    Future<int> sessionsNamed(String localId) async =>
-        (await backend.sessions(managerToken, orgId)).where((s) => s['site_name'] == localId).length;
-
-    Future<Map<String, dynamic>?> storedSession(String localId) async {
-      final serverId = (await backend.syncStatus(managerToken, [localId]))[localId]?['server_id'];
-      if (serverId == null) return null;
-      return (await backend.sessions(managerToken, orgId)).where((s) => s['id'] == serverId).singleOrNull;
-    }
+    setUpAll(() async => live = await LiveRun.start());
+    tearDownAll(() => live.cleanUp());
 
     test('a lost reply after the server saved the outing leaves one session and settles on the next sync', () async {
-      final localId = 'e2e-lost-reply-$run';
+      final localId = live.localId('lost-reply');
       final lostReply = LostReplyAdapter(method: 'POST', pathContains: '/field-outings');
-      final harness = await SyncHarness.createLive(baseUrl: baseUrl!, token: contributorToken, adapter: lostReply);
+      final harness = await SyncHarness.createLive(baseUrl: baseUrl!, token: live.contributorToken, adapter: lostReply);
       addTearDown(harness.dispose);
-      final outingId = await seedOuting(harness, orgId: orgId, localId: localId);
+      final outingId = await live.seedOuting(harness, localId);
 
       expect(await harness.sync.uploadFieldOuting(outingId), isNull);
       expect(lostReply.committed, 1);
       expect((await harness.outing(outingId))['sync_status'], 'pending');
-      expect(await sessionsNamed(localId), 1);
+      expect(await live.sessionsNamed(localId), 1);
 
       await harness.sync.uploadAllPendingOutings();
 
-      expect(await sessionsNamed(localId), 1);
-      final stored = (await storedSession(localId))!;
+      expect(await live.sessionsNamed(localId), 1);
+      final stored = (await live.storedSession(localId))!;
       final outing = await harness.outing(outingId);
       expect(outing['sync_status'], 'synced');
       expect(outing['server_id'], stored['id']);
@@ -55,34 +35,34 @@ void main() {
     });
 
     test('a plot saved after the outing synced reaches the same session exactly once', () async {
-      final localId = 'e2e-late-plot-$run';
-      final harness = await SyncHarness.createLive(baseUrl: baseUrl!, token: contributorToken);
+      final localId = live.localId('late-plot');
+      final harness = await SyncHarness.createLive(baseUrl: baseUrl!, token: live.contributorToken);
       addTearDown(harness.dispose);
-      final outingId = await seedOuting(harness, orgId: orgId, localId: localId);
+      final outingId = await live.seedOuting(harness, localId);
       final serverId = await harness.sync.uploadFieldOuting(outingId);
       expect(serverId, isNotNull);
 
-      await addLatePlot(harness, outingId: outingId, localId: localId, plot: 3);
+      await live.addLatePlot(harness, outingId: outingId, localId: localId, plot: 3);
       await harness.sync.uploadAllPendingOutings();
       await harness.sync.uploadAllPendingOutings();
 
-      expect(await sessionsNamed(localId), 1);
-      final stored = (await storedSession(localId))!;
+      expect(await live.sessionsNamed(localId), 1);
+      final stored = (await live.storedSession(localId))!;
       expect(stored['id'], serverId);
       expect(stored['record_count'], 3);
       expect((await harness.vegetation(outingId)).map((p) => p['server_id']), everyElement(isNotNull));
     });
 
     test('a viewer cannot upload, nothing is created, and the outing stays pending for later', () async {
-      final localId = 'e2e-viewer-$run';
-      final harness = await SyncHarness.createLive(baseUrl: baseUrl!, token: viewerToken);
+      final localId = live.localId('viewer');
+      final harness = await SyncHarness.createLive(baseUrl: baseUrl!, token: live.viewerToken);
       addTearDown(harness.dispose);
-      final outingId = await seedOuting(harness, orgId: orgId, localId: localId);
+      final outingId = await live.seedOuting(harness, localId);
 
       expect(await harness.sync.uploadFieldOuting(outingId), isNull);
 
-      expect(await sessionsNamed(localId), 0);
-      expect(await storedSession(localId), isNull);
+      expect(await live.sessionsNamed(localId), 0);
+      expect(await live.storedSession(localId), isNull);
       final outing = await harness.outing(outingId);
       expect(outing['sync_status'], 'pending');
       expect(outing['server_id'], isNull);
@@ -90,19 +70,19 @@ void main() {
     });
 
     test('the same pending outing uploads once the user has upload rights', () async {
-      final localId = 'e2e-rights-$run';
-      final asViewer = await SyncHarness.createLive(baseUrl: baseUrl!, token: viewerToken);
-      addTearDown(asViewer.dispose);
-      final outingId = await seedOuting(asViewer, orgId: orgId, localId: localId);
-      await asViewer.sync.uploadFieldOuting(outingId);
-      expect(await storedSession(localId), isNull);
+      final localId = live.localId('rights');
+      final harness = await SyncHarness.createLive(baseUrl: baseUrl!, token: live.viewerToken);
+      addTearDown(harness.dispose);
+      final outingId = await live.seedOuting(harness, localId);
+      await harness.sync.uploadFieldOuting(outingId);
+      expect(await live.storedSession(localId), isNull);
 
-      asViewer.sync.setAuthToken(contributorToken);
-      final serverId = await asViewer.sync.uploadFieldOuting(outingId);
+      harness.sync.setAuthToken(live.contributorToken);
+      final serverId = await harness.sync.uploadFieldOuting(outingId);
 
       expect(serverId, isNotNull);
-      expect(await storedSession(localId), isNotNull);
-      expect((await asViewer.outing(outingId))['sync_status'], 'synced');
+      expect(await live.storedSession(localId), isNotNull);
+      expect((await harness.outing(outingId))['sync_status'], 'synced');
     });
   });
 }

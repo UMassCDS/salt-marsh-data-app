@@ -25,6 +25,11 @@ class LiveBackend {
     return (response.data['sessions'] as List).cast<Map<String, dynamic>>();
   }
 
+  Future<void> deleteSession(String token, int orgId, int sessionId) async {
+    final response = await _dio.delete('/api/v1/orgs/$orgId/sessions/$sessionId', options: _as(token));
+    if (response.statusCode != 200) throw StateError('Deleting session $sessionId failed: ${response.statusCode} ${response.data}');
+  }
+
   Future<Map<String, dynamic>> syncStatus(String token, List<String> localIds) async {
     final response = await _dio.post('/api/mobile/sync-status', data: {'local_ids': localIds}, options: _as(token));
     return (response.data['records'] as Map).cast<String, dynamic>();
