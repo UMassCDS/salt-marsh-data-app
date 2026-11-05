@@ -48,8 +48,9 @@ class RecordedRequest {
   final String path;
   final dynamic data;
   final bool reachedServer;
+  final Map<String, dynamic> headers;
 
-  RecordedRequest(this.method, this.path, this.data, this.reachedServer);
+  RecordedRequest(this.method, this.path, this.data, this.reachedServer, this.headers);
 }
 
 // Mirrors the real backend: field-outings is idempotent per local_id and sync-status matches exactly
@@ -88,20 +89,20 @@ class FakeBackend implements HttpClientAdapter {
     final fault = faults.where((f) => f.matches(method, path, count)).firstOrNull;
 
     if (fault?.kind == FaultKind.dropBeforeServer) {
-      requests.add(RecordedRequest(method, path, options.data, false));
+      requests.add(RecordedRequest(method, path, options.data, false, options.headers));
       throw DioException(requestOptions: options, type: fault!.dioType, message: 'injected: dropped before server');
     }
     if (fault?.kind == FaultKind.serverError) {
-      requests.add(RecordedRequest(method, path, options.data, false));
+      requests.add(RecordedRequest(method, path, options.data, false, options.headers));
       return _json({'detail': 'injected server error'}, 500);
     }
     if (fault?.kind == FaultKind.unauthorized || fault?.kind == FaultKind.forbidden) {
-      requests.add(RecordedRequest(method, path, options.data, false));
+      requests.add(RecordedRequest(method, path, options.data, false, options.headers));
       final unauthorized = fault!.kind == FaultKind.unauthorized;
       return _json({'detail': unauthorized ? 'Not authenticated' : 'Requires contributor permission'}, unauthorized ? 401 : 403);
     }
 
-    requests.add(RecordedRequest(method, path, options.data, true));
+    requests.add(RecordedRequest(method, path, options.data, true, options.headers));
     final response = await _handle(method, path, options);
 
     if (fault?.kind == FaultKind.loseResponseAfterCommit) {
