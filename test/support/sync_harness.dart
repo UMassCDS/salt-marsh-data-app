@@ -42,11 +42,13 @@ class SyncHarness {
     return SyncHarness._(appDb, backend, connectivity, sync);
   }
 
-  static Future<SyncHarness> createLive({required String baseUrl, required String token}) async {
+  static Future<SyncHarness> createLive({required String baseUrl, required String token, HttpClientAdapter? adapter}) async {
     final appDb = AppDatabase.forTesting(path: inMemoryDatabasePath);
     await appDb.database;
     final connectivity = FakeConnectivity();
-    final sync = SyncService.forTesting(dio: Dio(), db: appDb, connectivity: connectivity, baseUrl: baseUrl)..setAuthToken(token);
+    final dio = Dio();
+    if (adapter != null) dio.httpClientAdapter = adapter;
+    final sync = SyncService.forTesting(dio: dio, db: appDb, connectivity: connectivity, baseUrl: baseUrl)..setAuthToken(token);
     return SyncHarness._(appDb, null, connectivity, sync);
   }
 
