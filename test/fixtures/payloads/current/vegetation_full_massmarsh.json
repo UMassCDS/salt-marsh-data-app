@@ -1,0 +1,78 @@
+{
+  "elevation_records": [],
+  "end_time": "2026-07-01T11:30:00",
+  "hydrology_records": [],
+  "latitude": 42.1,
+  "local_id": "full-outing",
+  "longitude": -71.2,
+  "monitoring_type": "vegetation",
+  "org_id": 1,
+  "other_members": "Sam Rivera, Jo Park",
+  "protocol_code": "MassMarshVeg",
+  "site_name": "Plum Island",
+  "start_time": "2026-07-01T09:00:00",
+  "submission_time": "2026-07-01T11:45:00",
+  "vegetation_records": [
+    {
+      "accuracy_m": 4.2,
+      "canopy_height_m": 0.45,
+      "distance_along_transect_m": 12.5,
+      "elevation_m": 1.31,
+      "habitat_type": "High Marsh",
+      "latitude": 42.1,
+      "local_id": "full-plot-1",
+      "location_quality": "gps_good",
+      "longitude": -71.2,
+      "notes": "Dense stand, wrack at the edge",
+      "photo_url": null,
+      "plot_id": "PLT-01",
+      "plot_number": 1,
+      "protocol_code": "MassMarshVeg",
+      "rtk_point_number": null,
+      "species_observations": [
+        {
+          "percentage_cover": 55,
+          "species_code": "SPAL"
+        },
+        {
+          "percentage_cover": 30,
+          "species_code": "SPPAT"
+        },
+        {
+          "percentage_cover": 15,
+          "species_code": "BARE"
+        }
+      ],
+      "subclass": null,
+      "thatch_height_m": 0.07,
+      "transect_id": "T1"
+    },
+    {
+      "accuracy_m": 11.8,
+      "canopy_height_m": 0.9,
+      "distance_along_transect_m": 25.0,
+      "elevation_m": null,
+      "habitat_type": "Low Marsh",
+      "latitude": 42.1,
+      "local_id": "full-plot-2",
+      "location_quality": "gps_fair",
+      "longitude": -71.2,
+      "notes": null,
+      "photo_url": null,
+      "plot_id": "PLT-02",
+      "plot_number": 2,
+      "protocol_code": "MassMarshVeg",
+      "rtk_point_number": null,
+      "species_observations": [
+        {
+          "percentage_cover": 100,
+          "species_code": "SPAL"
+        }
+      ],
+      "subclass": null,
+      "thatch_height_m": 0.12,
+      "transect_id": "T1"
+    }
+  ],
+  "visibility": "public"
+}

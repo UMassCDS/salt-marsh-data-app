@@ -1,0 +1,45 @@
+{
+  "elevation_records": [],
+  "embargo_until": "2027-07-01T00:00:00",
+  "end_time": "2026-07-01T11:30:00",
+  "hydrology_records": [],
+  "latitude": null,
+  "local_id": "embargo-outing",
+  "longitude": null,
+  "monitoring_type": "vegetation",
+  "org_id": 1,
+  "other_members": null,
+  "protocol_code": "MassMarshVeg",
+  "site_name": "Plum Island",
+  "start_time": "2026-07-01T09:00:00",
+  "submission_time": "2026-07-01T11:45:00",
+  "vegetation_records": [
+    {
+      "accuracy_m": null,
+      "canopy_height_m": null,
+      "distance_along_transect_m": null,
+      "elevation_m": null,
+      "habitat_type": null,
+      "latitude": 42.1,
+      "local_id": "embargo-plot-1",
+      "location_quality": null,
+      "longitude": -71.2,
+      "notes": null,
+      "photo_url": null,
+      "plot_id": null,
+      "plot_number": 1,
+      "protocol_code": "MassMarshVeg",
+      "rtk_point_number": null,
+      "species_observations": [
+        {
+          "percentage_cover": 60,
+          "species_code": "SPAL"
+        }
+      ],
+      "subclass": null,
+      "thatch_height_m": null,
+      "transect_id": "T1"
+    }
+  ],
+  "visibility": "embargo"
+}

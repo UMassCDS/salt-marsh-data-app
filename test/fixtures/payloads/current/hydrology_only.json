@@ -1,0 +1,33 @@
+{
+  "elevation_records": [],
+  "end_time": "2026-07-01T11:30:00",
+  "hydrology_records": [
+    {
+      "area_treatment": "Treatment",
+      "elevation_waypoint_type": "Well top",
+      "local_id": "hydro-1",
+      "notes": "Sensor swapped",
+      "rtk_elevation_navd88_m": 1.874,
+      "serial_number": "WLR-2201",
+      "time_water_elevation_taken": "2026-07-01T10:15:00",
+      "water_above_below_nut_m": -0.12,
+      "waypoint_number": "WP-7",
+      "well_length_m": 1.2,
+      "well_rim_to_marsh_m": 0.31,
+      "well_rim_to_sensor_m": 0.9,
+      "well_rim_to_water_m": 0.64,
+      "wlr_type": "HOBO U20L"
+    }
+  ],
+  "latitude": null,
+  "local_id": "hydro-outing",
+  "longitude": null,
+  "monitoring_type": "hydrology",
+  "org_id": 1,
+  "other_members": null,
+  "protocol_code": "MassMarshVeg",
+  "site_name": "Plum Island",
+  "start_time": "2026-07-01T09:00:00",
+  "submission_time": "2026-07-01T11:45:00",
+  "vegetation_records": []
+}
