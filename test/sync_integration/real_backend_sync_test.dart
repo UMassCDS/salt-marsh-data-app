@@ -6,12 +6,18 @@ import '../support/sync_harness.dart';
 
 // Runs the app's real sync code against a real backend. Skipped unless E2E_API_BASE_URL is set (the backend repo's workflow sets it).
 final baseUrl = Platform.environment['E2E_API_BASE_URL'];
+// Set by the backend workflow so a missing backend fails the run instead of silently skipping every test
+final backendRequired = Platform.environment['E2E_REQUIRED'] == '1';
 
 const contributor = ('contributor@umass.edu', 'demo123');
 const manager = ('manager@umass.edu', 'demo123');
 
 void main() {
   setUpAll(useInMemorySqlite);
+
+  test('a backend address is provided when the run requires one', () {
+    if (backendRequired) expect(baseUrl, isNotNull, reason: 'E2E_REQUIRED is set but E2E_API_BASE_URL is not');
+  });
 
   group('against a real backend', skip: baseUrl == null ? 'set E2E_API_BASE_URL to run against a real backend' : null, () {
     late LiveBackend backend;
