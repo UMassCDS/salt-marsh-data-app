@@ -1,0 +1,37 @@
+{
+  "elevation_records": [
+    {
+      "elevation_navd88_m": 1.3,
+      "feature_type": "Platform",
+      "latitude": 42.100100000000005,
+      "local_id": "elev-1",
+      "longitude": -71.2,
+      "notes": null,
+      "point_number": 1,
+      "transect_id": "T1"
+    },
+    {
+      "elevation_navd88_m": 1.4,
+      "feature_type": null,
+      "latitude": 42.1002,
+      "local_id": "elev-2",
+      "longitude": -71.2,
+      "notes": null,
+      "point_number": 2,
+      "transect_id": "T1"
+    }
+  ],
+  "end_time": "2026-07-01T11:30:00",
+  "hydrology_records": [],
+  "latitude": null,
+  "local_id": "elev-outing",
+  "longitude": null,
+  "monitoring_type": "elevation",
+  "org_id": 1,
+  "other_members": null,
+  "protocol_code": "MassMarshVeg",
+  "site_name": "Plum Island",
+  "start_time": "2026-07-01T09:00:00",
+  "submission_time": "2026-07-01T11:45:00",
+  "vegetation_records": []
+}
