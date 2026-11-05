@@ -19,7 +19,6 @@ jobs:
     env:
       E2E_API_BASE_URL: https://dev.saltmarshdata.org
       E2E_REQUIRED: "1"
-      E2E_ORG_ID: ${{ secrets.E2E_ORG_ID }}
       E2E_CONTRIBUTOR_EMAIL: ${{ secrets.E2E_CONTRIBUTOR_EMAIL }}
       E2E_CONTRIBUTOR_PASSWORD: ${{ secrets.E2E_CONTRIBUTOR_PASSWORD }}
       E2E_MANAGER_EMAIL: ${{ secrets.E2E_MANAGER_EMAIL }}
