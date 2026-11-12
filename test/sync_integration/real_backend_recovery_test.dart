@@ -84,5 +84,23 @@ void main() {
       expect(await live.storedSession(localId), isNotNull);
       expect((await harness.outing(outingId))['sync_status'], 'synced');
     });
+
+    test('an outing saved while signed out stays pending and uploads after signing in', () async {
+      final localId = live.localId('signed-out');
+      final harness = await SyncHarness.createLive(baseUrl: baseUrl!, token: live.contributorToken);
+      addTearDown(harness.dispose);
+      harness.sync.clearAuthToken();
+      final outingId = await live.seedOuting(harness, localId);
+
+      expect(await harness.sync.uploadAllPendingOutings(), 0);
+      expect(await live.storedSession(localId), isNull);
+      expect((await harness.outing(outingId))['sync_status'], 'pending');
+
+      harness.sync.setAuthToken(live.contributorToken);
+      expect(await harness.sync.uploadAllPendingOutings(), 1);
+
+      expect(await live.storedSession(localId), isNotNull);
+      expect((await harness.outing(outingId))['sync_status'], 'synced');
+    });
   });
 }
