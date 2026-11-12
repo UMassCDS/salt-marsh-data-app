@@ -25,8 +25,10 @@
       "longitude": -71.2,
       "notes": null,
       "photo_url": "https://fake.blob.local/photos/1.jpg",
+      "plot_end_time": null,
       "plot_id": null,
       "plot_number": 1,
+      "plot_start_time": null,
       "protocol_code": "MassMarshVeg",
       "rtk_point_number": null,
       "species_observations": [
@@ -51,8 +53,10 @@
       "longitude": -71.2,
       "notes": null,
       "photo_url": null,
+      "plot_end_time": null,
       "plot_id": null,
       "plot_number": 2,
+      "plot_start_time": null,
       "protocol_code": "MassMarshVeg",
       "rtk_point_number": null,
       "species_observations": [

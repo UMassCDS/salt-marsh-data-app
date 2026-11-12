@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../../utils/plot_timing.dart';
 import 'plot_data.dart';
 
 String generatePlotId(String transectId, int plotNumber) {
@@ -112,6 +113,8 @@ class DraftSnapshot {
       'longitude': plot.longitude,
       'accuracy_m': plot.accuracyM,
       'location_quality': plot.locationQuality,
+      'plot_start_time': plot.plotStartTime == null ? null : isoWithOffset(plot.plotStartTime!),
+      'plot_end_time': plot.plotEndTime == null ? null : isoWithOffset(plot.plotEndTime!),
       'elevation_m': plot.elevation,
       'canopy_height_m': plot.canopyHeight,
       'thatch_height_m': plot.thatchHeight,

@@ -25,8 +25,10 @@
       "longitude": -71.2,
       "notes": null,
       "photo_url": null,
+      "plot_end_time": null,
       "plot_id": null,
       "plot_number": 1,
+      "plot_start_time": null,
       "protocol_code": "UASCommunity",
       "rtk_point_number": "RTK-0042",
       "species_observations": [

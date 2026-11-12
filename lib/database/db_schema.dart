@@ -130,6 +130,8 @@ class DbSchema {
       elevation_m REAL,
       accuracy_m REAL,
       location_quality TEXT,
+      plot_start_time TEXT,
+      plot_end_time TEXT,
       canopy_height_m REAL,
       thatch_height_m REAL,
       species_observations TEXT NOT NULL,

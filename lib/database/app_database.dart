@@ -15,7 +15,7 @@ import 'seeds/template_seeds.dart';
 /// Main database class for MassMarsh app
 class AppDatabase {
   static const String _dbName = 'mass_marsh.db';
-  static const int _dbVersion = 10;
+  static const int _dbVersion = 11;
 
   static final AppDatabase _instance = AppDatabase._internal();
 
@@ -281,6 +281,11 @@ class AppDatabase {
       await _addColumnIfMissing(db, 'vegetation_records', 'location_quality', 'TEXT');
       await _addColumnIfMissing(db, 'elevation_records', 'accuracy_m', 'REAL');
       await _addColumnIfMissing(db, 'elevation_records', 'location_quality', 'TEXT');
+    }
+    if (oldVersion < 11) {
+      // Existing plots stay null: their real times were never recorded
+      await _addColumnIfMissing(db, 'vegetation_records', 'plot_start_time', 'TEXT');
+      await _addColumnIfMissing(db, 'vegetation_records', 'plot_end_time', 'TEXT');
     }
   }
 

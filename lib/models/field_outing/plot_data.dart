@@ -37,6 +37,8 @@ class PlotData {
   List<PlotSpeciesEntry> species;
   String? subclass;
   String? rtkPointNumber;
+  DateTime? plotStartTime;
+  DateTime? plotEndTime;
   final TextEditingController latController;
   final TextEditingController lngController;
   final TextEditingController plotIdController;
@@ -65,6 +67,8 @@ class PlotData {
     this.species = const [],
     this.subclass,
     this.rtkPointNumber,
+    this.plotStartTime,
+    this.plotEndTime,
     List<String> pinnedCodes = const ['SPALT', 'SPPAT', 'BARE', 'DEAD'],
   })  : localId = localId ?? 'veg_${const Uuid().v4()}',
         latController = TextEditingController(text: latitude == 0 ? '' : latitude.toString()),
@@ -132,6 +136,8 @@ class PlotData {
       species: species,
       subclass: record['subclass'] as String?,
       rtkPointNumber: record['rtk_point_number'] as String?,
+      plotStartTime: DateTime.tryParse(record['plot_start_time'] as String? ?? ''),
+      plotEndTime: DateTime.tryParse(record['plot_end_time'] as String? ?? ''),
       pinnedCodes: pinnedCodes,
     );
   }

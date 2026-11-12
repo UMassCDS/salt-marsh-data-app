@@ -5,6 +5,7 @@ import '../../../services/species_service.dart';
 import '../../../utils/gps_quality.dart';
 import '../../../utils/photo_viewer.dart';
 import 'plot_text_field.dart';
+import 'plot_time_row.dart';
 import 'species_cover_input.dart';
 
 class CollapsedPlotSummary extends StatelessWidget {
@@ -100,6 +101,8 @@ class PlotCard extends StatelessWidget {
   final VoidCallback onTakePhoto;
   final VoidCallback onChoosePhoto;
   final VoidCallback onSpeciesChanged;
+  final ValueChanged<DateTime> onStartTimeChanged;
+  final ValueChanged<DateTime> onEndTimeChanged;
 
   const PlotCard({
     super.key,
@@ -121,6 +124,8 @@ class PlotCard extends StatelessWidget {
     required this.onTakePhoto,
     required this.onChoosePhoto,
     required this.onSpeciesChanged,
+    required this.onStartTimeChanged,
+    required this.onEndTimeChanged,
   });
 
   @override
@@ -159,7 +164,13 @@ class PlotCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
+            PlotTimeRow(
+              start: plot.plotStartTime,
+              end: plot.plotEndTime,
+              onStartChanged: onStartTimeChanged,
+              onEndChanged: onEndTimeChanged,
+            ),
 
             // Plot fields - conditional per protocol
             if (!(activeProtocol?.isFieldHidden('transect_id') ?? false))
