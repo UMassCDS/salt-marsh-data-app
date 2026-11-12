@@ -61,6 +61,8 @@ final payloadScenarios = <PayloadScenario>[
       'distance_along_transect_m': 12.5,
       'accuracy_m': 4.2,
       'location_quality': 'gps_good',
+      'plot_start_time': '2026-07-01T09:14:05-04:00',
+      'plot_end_time': '2026-07-01T09:21:40-04:00',
       'elevation_m': 1.31,
       'canopy_height_m': 0.45,
       'thatch_height_m': 0.07,

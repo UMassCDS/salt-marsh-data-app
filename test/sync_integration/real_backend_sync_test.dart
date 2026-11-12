@@ -38,6 +38,13 @@ void main() {
       expect(stored['site_name'], localId);
       expect(stored['monitoring_type'], 'vegetation');
       expect(stored['record_count'], 2);
+
+      final detail = await live.backend.sessionDetail(live.managerToken, live.orgId, serverId!);
+      final times = {
+        for (final p in (detail['vegetation_records'] as List).cast<Map<String, dynamic>>())
+          p['plot_number']: (p['plot_start_time'], p['plot_end_time']),
+      };
+      expect(times, {1: (plotOneStart, plotOneEnd), 2: (null, null)});
     });
 
     test('sending the same outing again does not create a second session', () async {

@@ -219,6 +219,8 @@ class SyncService {
       'longitude': veg['longitude'],
       'accuracy_m': veg['accuracy_m'],
       'location_quality': veg['location_quality'],
+      'plot_start_time': veg['plot_start_time'],
+      'plot_end_time': veg['plot_end_time'],
       'elevation_m': veg['elevation_m'],
       'canopy_height_m': veg['canopy_height_m'],
       'thatch_height_m': veg['thatch_height_m'],

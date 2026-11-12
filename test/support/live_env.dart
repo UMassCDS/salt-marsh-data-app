@@ -108,6 +108,9 @@ class LiveRun {
   }
 }
 
+const plotOneStart = '2026-07-01T09:14:05-04:00';
+const plotOneEnd = '2026-07-01T09:21:40-04:00';
+
 Map<String, Object?> plotRow(String localId, int outingId, int plot) => {
       'local_id': '$localId-plot-$plot',
       'outing_id': outingId,
@@ -117,6 +120,8 @@ Map<String, Object?> plotRow(String localId, int outingId, int plot) => {
       'longitude': -71.2,
       'accuracy_m': 4.2,
       'location_quality': 'gps_good',
+      if (plot == 1) 'plot_start_time': plotOneStart,
+      if (plot == 1) 'plot_end_time': plotOneEnd,
       'canopy_height_m': 0.45,
       'thatch_height_m': 0.07,
       'species_observations': jsonEncode([
