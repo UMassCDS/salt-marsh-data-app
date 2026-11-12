@@ -24,6 +24,8 @@ final _env = Platform.environment;
 final baseUrl = refuseProduction(_env['E2E_API_BASE_URL']);
 final backendRequired = _env['E2E_REQUIRED'] == '1';
 final skipWithoutBackend = baseUrl == null ? 'set E2E_API_BASE_URL to run against a real backend' : null;
+// Set where the backend has photo storage (Azurite in CI, real storage on dev); otherwise uploads get a 503
+final backendHasPhotoStorage = _env['E2E_PHOTO_STORAGE'] == '1';
 
 // Defaults are the demo users that backend/scripts/init_db.py creates; a shared server passes its own test accounts
 (String, String) credentialsFor(String role, {Map<String, String>? env}) {
@@ -58,7 +60,7 @@ class LiveRun {
 
   String localId(String name) => 'e2e-$name-$id';
 
-  Future<int> seedOuting(SyncHarness harness, String localId, {int plots = 2}) async {
+  Future<int> seedOuting(SyncHarness harness, String localId, {int plots = 2, String? photoForFirstPlot}) async {
     _seeded.add(localId);
     final db = await harness.db;
     final outingId = await db.insert('field_outings', {
@@ -73,7 +75,10 @@ class LiveRun {
       'sync_status': 'pending',
     });
     for (var plot = 1; plot <= plots; plot++) {
-      await db.insert('vegetation_records', plotRow(localId, outingId, plot));
+      await db.insert('vegetation_records', {
+        ...plotRow(localId, outingId, plot),
+        if (plot == 1 && photoForFirstPlot != null) 'photo_local_path': photoForFirstPlot,
+      });
     }
     return outingId;
   }
