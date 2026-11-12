@@ -30,6 +30,9 @@ class LiveBackend {
     if (response.statusCode != 200) throw StateError('Deleting session $sessionId failed: ${response.statusCode} ${response.data}');
   }
 
+  Future<Map<String, dynamic>> sessionDetail(String token, int orgId, int sessionId) =>
+      _getJson('/api/v1/orgs/$orgId/sessions/$sessionId', token: token);
+
   Future<Map<String, dynamic>> _getJson(String path, {String? token}) async {
     final response = await _dio.get(path, options: token == null ? null : _as(token));
     if (response.statusCode != 200) throw StateError('GET $path failed: ${response.statusCode} ${response.data}');
