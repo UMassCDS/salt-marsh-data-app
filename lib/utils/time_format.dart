@@ -28,3 +28,10 @@ DateTime? parseTimeString(String timeStr) {
     return null;
   }
 }
+
+// The same 12-hour form parseTimeString reads, e.g. "9:14 AM"
+String formatClockTime(DateTime time) {
+  final hour = time.hour % 12 == 0 ? 12 : time.hour % 12;
+  final minute = time.minute.toString().padLeft(2, '0');
+  return '$hour:$minute ${time.hour >= 12 ? 'PM' : 'AM'}';
+}

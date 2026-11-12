@@ -20,6 +20,7 @@ import '../../utils/gps_quality.dart';
 import '../../utils/id_utils.dart';
 import '../../utils/photo_storage.dart';
 import '../../utils/snackbar_utils.dart';
+import '../../utils/plot_timing.dart';
 import '../../utils/time_format.dart';
 import 'widgets/action_bar.dart';
 import 'widgets/common_fields.dart';
@@ -123,8 +124,27 @@ class _FormScreenState extends ConsumerState<FormScreen>
   Timer? _autosaveFadeTimer;
 
   void _onEdited() {
+    _trackPlotTimes();
     if (!_isDirty) return;
     _autosave.schedule();
+  }
+
+  void _trackPlotTimes() {
+    if (!updatePlotTimes(_plots, DateTime.now())) return;
+    final firstStart = earliestPlotStart(_plots);
+    if (_startTimeController.text.isEmpty && firstStart != null) {
+      _startTimeController.text = formatClockTime(firstStart);
+    }
+    if (mounted) setState(() {});
+  }
+
+  // Submitting ends the session: the open plot ends now and an empty end time is filled in
+  void _endSessionTimes() {
+    final now = DateTime.now();
+    endOpenPlots(_plots, now);
+    if (_endTimeController.text.isEmpty && _plots.any((p) => p.plotStartTime != null)) {
+      _endTimeController.text = formatClockTime(now);
+    }
   }
 
   // Snapshot of the form state at the last save (or initial load), used to
@@ -195,6 +215,8 @@ class _FormScreenState extends ConsumerState<FormScreen>
         plot.photoPath,
         plot.subclass,
         plot.rtkPointNumberController.text,
+        plot.plotStartTime,
+        plot.plotEndTime,
         speciesSig,
       ].join('|');
     }).join(';');
@@ -353,14 +375,8 @@ class _FormScreenState extends ConsumerState<FormScreen>
       }
 
       // Load times if available
-      if (draft.startTime != null) {
-        final start = draft.startTime!;
-        _startTimeController.text = '${start.hour > 12 ? start.hour - 12 : start.hour == 0 ? 12 : start.hour}:${start.minute.toString().padLeft(2, '0')} ${start.hour >= 12 ? 'PM' : 'AM'}';
-      }
-      if (draft.endTime != null) {
-        final end = draft.endTime!;
-        _endTimeController.text = '${end.hour > 12 ? end.hour - 12 : end.hour == 0 ? 12 : end.hour}:${end.minute.toString().padLeft(2, '0')} ${end.hour >= 12 ? 'PM' : 'AM'}';
-      }
+      if (draft.startTime != null) _startTimeController.text = formatClockTime(draft.startTime!);
+      if (draft.endTime != null) _endTimeController.text = formatClockTime(draft.endTime!);
 
       // Restore visibility settings
       setState(() {
@@ -878,6 +894,14 @@ class _FormScreenState extends ConsumerState<FormScreen>
                 setState(() {});
                 _onEdited();
               },
+              onStartTimeChanged: (t) {
+                setState(() => plot.plotStartTime = t);
+                _onEdited();
+              },
+              onEndTimeChanged: (t) {
+                setState(() => plot.plotEndTime = t);
+                _onEdited();
+              },
             )
           : CollapsedPlotSummary(
               plot: plot,
@@ -1069,6 +1093,7 @@ class _FormScreenState extends ConsumerState<FormScreen>
           _plots[plotIndex].photoFile = File(permanentPath);
           _plots[plotIndex].photoPath = permanentPath;
         });
+        _trackPlotTimes();
         // Flushed rather than scheduled: a photo is expensive to retake
         await _autosave.flush();
       }
@@ -1095,6 +1120,7 @@ class _FormScreenState extends ConsumerState<FormScreen>
           _plots[plotIndex].photoFile = File(permanentPath);
           _plots[plotIndex].photoPath = permanentPath;
         });
+        _trackPlotTimes();
         // Flushed rather than scheduled: a photo is expensive to retake
         await _autosave.flush();
       }
@@ -1248,6 +1274,7 @@ class _FormScreenState extends ConsumerState<FormScreen>
       return;
     }
 
+    _endSessionTimes();
     try {
       // Parse start and end times
       final startTime = parseTimeString(_startTimeController.text);
