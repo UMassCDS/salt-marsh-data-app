@@ -9,6 +9,7 @@ import '../providers/org_provider.dart';
 import '../services/protocol_service.dart';
 import '../services/species_service.dart';
 import 'form/form_screen.dart';
+import 'home/update_banner.dart';
 import 'outings/drafts_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -158,6 +159,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            const UpdateBanner(),
             if (signedInOffline)
               Container(
                 color: colorScheme.tertiaryContainer,
