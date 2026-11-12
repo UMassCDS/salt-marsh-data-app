@@ -6,7 +6,7 @@ import 'package:mass_marsh_app/services/update_check.dart';
 
 class _FakeChecker extends UpdateChecker {
   _FakeChecker(this._update) : super(enabled: true);
-  AvailableUpdate? _update;
+  final AvailableUpdate? _update;
   String? dismissed;
 
   @override
