@@ -105,13 +105,21 @@ void main() {
     expect(github.calls, 2);
   });
 
-  test('a dismissed release is not offered again, but a newer one is', () async {
+  test('a dismissed release is marked dismissed, but a newer one is not', () async {
     await checker().dismiss('0.8.0');
-    expect(await checker().check(), isNull);
+    final dismissed = await checker().check();
+    expect(dismissed?.version, '0.8.0');
+    expect(dismissed?.dismissed, isTrue);
 
     clock = clock.add(const Duration(days: 1));
     github.reply = {...release, 'tag_name': 'v0.9.0'};
-    expect((await checker().check())?.version, '0.9.0');
+    final newer = await checker().check();
+    expect(newer?.version, '0.9.0');
+    expect(newer?.dismissed, isFalse);
+  });
+
+  test('the installed version is reported without its build number', () async {
+    expect((await checker().check())?.installedVersion, '0.7.0');
   });
 
   test('dev builds never ask', () async {
