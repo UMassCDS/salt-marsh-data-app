@@ -5,8 +5,8 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import '../support/known_gap.dart';
 import '../support/sync_harness.dart' show useInMemorySqlite;
 
-const currentVersion = 10;
-const oldVersions = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+const currentVersion = 11;
+const oldVersions = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
 // Only v7 and later ever shipped in a tagged release; v1 and v2 fixtures are reconstructed from the migrations
 const knownGaps = <String, Map<int, String>>{
@@ -266,6 +266,22 @@ void main() {
   });
 
   group('an upgrade that was interrupted', () {
+    test('after adding one plot time column still completes, keeping plots and leaving their times empty', () async {
+      final path = newPath('interrupted_plot_times');
+      final old = await createOldDatabase(path, 10);
+      await seedField(old);
+      await old.execute('ALTER TABLE vegetation_records ADD COLUMN plot_start_time TEXT');
+      await old.close();
+
+      final upgraded = await upgrade(path);
+      addTearDown(upgraded.close);
+      final db = await upgraded.database;
+
+      expect(await db.getVersion(), currentVersion);
+      final plot = (await db.query('vegetation_records')).single;
+      expect((plot['plot_start_time'], plot['plot_end_time']), (null, null));
+    });
+
     test('after adding GPS columns but before bumping the version still completes', () async {
       final path = newPath('interrupted');
       final old = await createOldDatabase(path, 9);
