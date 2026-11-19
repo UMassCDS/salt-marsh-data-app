@@ -122,8 +122,8 @@ Map<String, Object?> plotRow(String localId, int outingId, int plot) => {
       'location_quality': 'gps_good',
       if (plot == 1) 'plot_start_time': plotOneStart,
       if (plot == 1) 'plot_end_time': plotOneEnd,
-      'canopy_height_m': 0.45,
-      'thatch_height_m': 0.07,
+      'canopy_height_cm': 45,
+      'thatch_height_cm': 7,
       'species_observations': jsonEncode([
         {'species_code': 'SPALT', 'percentage_cover': 60},
         {'species_code': 'BARE', 'percentage_cover': 40},

@@ -3,8 +3,8 @@ import '../models/field_outing/plot_data.dart';
 // Pre-filled values (transect, plot id, RTK number) are left out: they are set before anyone stands at the plot
 bool plotHasEnteredData(PlotData plot) =>
     plot.species.isNotEmpty ||
-    plot.canopyHeight != 0 ||
-    plot.thatchHeight != 0 ||
+    plot.canopyHeightCm != null ||
+    plot.thatchHeightCm != null ||
     plot.latitude != 0 ||
     plot.longitude != 0 ||
     plot.distanceAlongTransect != 0 ||

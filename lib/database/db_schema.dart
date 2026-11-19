@@ -134,6 +134,8 @@ class DbSchema {
       plot_end_time TEXT,
       canopy_height_m REAL,
       thatch_height_m REAL,
+      canopy_height_cm INTEGER,
+      thatch_height_cm INTEGER,
       species_observations TEXT NOT NULL,
       photo_local_path TEXT,
       photo_filename TEXT,

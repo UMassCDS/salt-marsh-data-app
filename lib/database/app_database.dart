@@ -15,7 +15,7 @@ import 'seeds/template_seeds.dart';
 /// Main database class for MassMarsh app
 class AppDatabase {
   static const String _dbName = 'mass_marsh.db';
-  static const int _dbVersion = 11;
+  static const int _dbVersion = 12;
 
   static final AppDatabase _instance = AppDatabase._internal();
 
@@ -286,6 +286,15 @@ class AppDatabase {
       // Existing plots stay null: their real times were never recorded
       await _addColumnIfMissing(db, 'vegetation_records', 'plot_start_time', 'TEXT');
       await _addColumnIfMissing(db, 'vegetation_records', 'plot_end_time', 'TEXT');
+    }
+    if (oldVersion < 12) {
+      // The *_m columns stay (SQLite cannot drop them cheaply) but nothing reads them after this
+      await _addColumnIfMissing(db, 'vegetation_records', 'canopy_height_cm', 'INTEGER');
+      await _addColumnIfMissing(db, 'vegetation_records', 'thatch_height_cm', 'INTEGER');
+      await db.execute(
+          'UPDATE vegetation_records SET canopy_height_cm = CAST(ROUND(canopy_height_m * 100) AS INTEGER) WHERE canopy_height_m IS NOT NULL AND canopy_height_cm IS NULL');
+      await db.execute(
+          'UPDATE vegetation_records SET thatch_height_cm = CAST(ROUND(thatch_height_m * 100) AS INTEGER) WHERE thatch_height_m IS NOT NULL AND thatch_height_cm IS NULL');
     }
   }
 

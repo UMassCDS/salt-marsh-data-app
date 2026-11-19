@@ -28,8 +28,8 @@ class PlotData {
   double longitude;
   double? accuracyM;
   String? locationQuality;
-  double canopyHeight;
-  double thatchHeight;
+  int? canopyHeightCm;
+  int? thatchHeightCm;
   double? elevation;
   String? notes;
   File? photoFile;
@@ -58,8 +58,8 @@ class PlotData {
     required this.longitude,
     this.accuracyM,
     this.locationQuality,
-    required this.canopyHeight,
-    required this.thatchHeight,
+    this.canopyHeightCm,
+    this.thatchHeightCm,
     this.elevation,
     this.notes,
     this.photoFile,
@@ -127,8 +127,8 @@ class PlotData {
       longitude: (record['longitude'] as num?)?.toDouble() ?? 0.0,
       accuracyM: (record['accuracy_m'] as num?)?.toDouble(),
       locationQuality: record['location_quality'] as String?,
-      canopyHeight: (record['canopy_height_m'] as num?)?.toDouble() ?? 0.0,
-      thatchHeight: (record['thatch_height_m'] as num?)?.toDouble() ?? 0.0,
+      canopyHeightCm: (record['canopy_height_cm'] as num?)?.round(),
+      thatchHeightCm: (record['thatch_height_cm'] as num?)?.round(),
       elevation: (record['elevation_m'] as num?)?.toDouble(),
       notes: record['notes'] as String?,
       photoPath: photoPath,

@@ -211,8 +211,8 @@ class _FormScreenState extends ConsumerState<FormScreen>
         plot.distanceAlongTransect,
         plot.latController.text,
         plot.lngController.text,
-        plot.canopyHeight,
-        plot.thatchHeight,
+        plot.canopyHeightCm,
+        plot.thatchHeightCm,
         plot.elevation,
         plot.notes,
         plot.photoPath,
@@ -354,8 +354,6 @@ class _FormScreenState extends ConsumerState<FormScreen>
         distanceAlongTransect: 0,
         latitude: 0,
         longitude: 0,
-        canopyHeight: 0,
-        thatchHeight: 0,
         species: [],
       ));
       _expandedPlotLocalId = _plots.first.localId;
@@ -958,9 +956,9 @@ class _FormScreenState extends ConsumerState<FormScreen>
           _plots[plotIndex].longitude = double.tryParse(value) ?? 0;
           _markLocationManual(plotIndex);
         case 'canopyHeight':
-          _plots[plotIndex].canopyHeight = double.tryParse(value) ?? 0;
+          _plots[plotIndex].canopyHeightCm = int.tryParse(value);
         case 'thatchHeight':
-          _plots[plotIndex].thatchHeight = double.tryParse(value) ?? 0;
+          _plots[plotIndex].thatchHeightCm = int.tryParse(value);
         case 'elevation':
           _plots[plotIndex].elevation = double.tryParse(value);
         case 'notes':
@@ -1006,8 +1004,6 @@ class _FormScreenState extends ConsumerState<FormScreen>
         distanceAlongTransect: 0,
         latitude: 0,
         longitude: 0,
-        canopyHeight: 0,
-        thatchHeight: 0,
         species: [],
         rtkPointNumber: autoRtk,
         pinnedCodes: _activeProtocol?.speciesConfig.pinnedSpecies ?? const ['SPALT', 'SPPAT', 'BARE', 'DEAD'],

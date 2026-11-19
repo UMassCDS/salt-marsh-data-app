@@ -13,15 +13,14 @@ void main() {
       distanceAlongTransect: 0,
       latitude: 0,
       longitude: 0,
-      canopyHeight: 0.4,
-      thatchHeight: 0,
+      canopyHeightCm: 40,
       species: [],
       plotStartTime: start,
       plotEndTime: end,
     );
     final unstarted = PlotData(
       transectId: 'T1', plotNumber: 2, habitatType: '', distanceAlongTransect: 0,
-      latitude: 0, longitude: 0, canopyHeight: 0, thatchHeight: 0, species: [],
+      latitude: 0, longitude: 0, species: [],
     );
 
     final rows = DraftSnapshot(monitoringType: 'vegetation', singleRecordLocalId: 'x', plots: [plot, unstarted]).toChildRows();
@@ -32,5 +31,23 @@ void main() {
     expect(reopened.plotEndTime!.isAtSameMomentAs(end), isTrue);
     expect((rows.last['plot_start_time'], rows.last['plot_end_time']), (null, null));
     expect(PlotData.fromDraftRow(rows.last).plotStartTime, isNull);
+  });
+
+  test('heights are saved as whole centimetres and blank stays blank, not zero', () {
+    PlotData plot({int? canopy, int? thatch}) => PlotData(
+          transectId: 'T1', plotNumber: 1, habitatType: '', distanceAlongTransect: 0,
+          latitude: 0, longitude: 0, species: [], canopyHeightCm: canopy, thatchHeightCm: thatch,
+        );
+    final rows = DraftSnapshot(
+      monitoringType: 'vegetation',
+      singleRecordLocalId: 'x',
+      plots: [plot(canopy: 73, thatch: 0), plot()],
+    ).toChildRows();
+
+    expect((rows.first['canopy_height_cm'], rows.first['thatch_height_cm']), (73, 0));
+    expect((rows.last['canopy_height_cm'], rows.last['thatch_height_cm']), (null, null));
+    final reopened = PlotData.fromDraftRow(rows.first);
+    expect((reopened.canopyHeightCm, reopened.thatchHeightCm), (73, 0));
+    expect(PlotData.fromDraftRow(rows.last).canopyHeightCm, isNull);
   });
 }

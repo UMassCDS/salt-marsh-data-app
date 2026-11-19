@@ -64,8 +64,8 @@ final payloadScenarios = <PayloadScenario>[
       'plot_start_time': '2026-07-01T09:14:05-04:00',
       'plot_end_time': '2026-07-01T09:21:40-04:00',
       'elevation_m': 1.31,
-      'canopy_height_m': 0.45,
-      'thatch_height_m': 0.07,
+      'canopy_height_cm': 45,
+      'thatch_height_cm': 7,
       'species_observations': _species([('SPAL', 55), ('SPPAT', 30), ('BARE', 15)]),
       'notes': 'Dense stand, wrack at the edge',
     });
@@ -76,8 +76,8 @@ final payloadScenarios = <PayloadScenario>[
       'distance_along_transect_m': 25.0,
       'accuracy_m': 11.8,
       'location_quality': 'gps_fair',
-      'canopy_height_m': 0.9,
-      'thatch_height_m': 0.12,
+      'canopy_height_cm': 90,
+      'thatch_height_cm': 12,
       'species_observations': _species([('SPAL', 100)]),
     });
     return id;
@@ -118,8 +118,8 @@ final payloadScenarios = <PayloadScenario>[
     final id = await _outing(db, 'edge-outing', {});
     await _plot(db, id, 'edge-plot-1', {
       'distance_along_transect_m': -1.5,
-      'canopy_height_m': 0.0,
-      'thatch_height_m': 0.0,
+      'canopy_height_cm': 0,
+      'thatch_height_cm': 0,
       'species_observations': _species([('SPAL', 0), ('WATER', 100)]),
     });
     return id;

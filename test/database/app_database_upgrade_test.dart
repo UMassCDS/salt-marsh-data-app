@@ -5,8 +5,8 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import '../support/known_gap.dart';
 import '../support/sync_harness.dart' show useInMemorySqlite;
 
-const currentVersion = 11;
-const oldVersions = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+const currentVersion = 12;
+const oldVersions = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
 
 // Only v7 and later ever shipped in a tagged release; v1 and v2 fixtures are reconstructed from the migrations
 const knownGaps = <String, Map<int, String>>{
@@ -262,6 +262,33 @@ void main() {
       expect(await reopened.getVersion(), currentVersion);
       expect(await describeSchema(reopened), schemaBefore);
       expect((await reopened.query('field_outings')).single['local_id'], 'keep-me');
+    });
+  });
+
+  group('heights saved in metres on the tablet', () {
+    test('become whole centimetres, keeping blanks blank', () async {
+      final path = newPath('heights');
+      final old = await createOldDatabase(path, 11);
+      for (final (id, canopy, thatch) in [(1, 0.73, 0.07), (2, 0.0, null), (3, null, 0.075), (4, 999.0, 0.005)]) {
+        await insertRow(old, 'vegetation_records', {
+          'id': id,
+          'local_id': 'veg-$id',
+          'outing_id': 1,
+          'plot_number': id,
+          'latitude': 0,
+          'longitude': 0,
+          'species_observations': '[]',
+          'canopy_height_m': canopy,
+          'thatch_height_m': thatch,
+        });
+      }
+      await old.close();
+
+      final upgraded = await upgrade(path);
+      addTearDown(upgraded.close);
+      final rows = await (await upgraded.database).query('vegetation_records', orderBy: 'id');
+
+      expect([for (final r in rows) (r['canopy_height_cm'], r['thatch_height_cm'])], [(73, 7), (0, null), (null, 8), (99900, 1)]);
     });
   });
 

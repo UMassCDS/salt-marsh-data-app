@@ -15,7 +15,7 @@
   "vegetation_records": [
     {
       "accuracy_m": 4.2,
-      "canopy_height_m": 0.45,
+      "canopy_height_cm": 45,
       "distance_along_transect_m": 12.5,
       "elevation_m": 1.31,
       "habitat_type": "High Marsh",
@@ -46,12 +46,12 @@
         }
       ],
       "subclass": null,
-      "thatch_height_m": 0.07,
+      "thatch_height_cm": 7,
       "transect_id": "T1"
     },
     {
       "accuracy_m": 11.8,
-      "canopy_height_m": 0.9,
+      "canopy_height_cm": 90,
       "distance_along_transect_m": 25.0,
       "elevation_m": null,
       "habitat_type": "Low Marsh",
@@ -74,7 +74,7 @@
         }
       ],
       "subclass": null,
-      "thatch_height_m": 0.12,
+      "thatch_height_cm": 12,
       "transect_id": "T1"
     }
   ],
