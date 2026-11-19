@@ -61,6 +61,7 @@ class SyncHarness {
     int plots = 2,
     int orgId = 1,
     String? photoPathForFirstPlot,
+    List<String> additionalPhotosForFirstPlot = const [],
   }) async {
     final database = await db;
     final outingId = await database.insert('field_outings', {
@@ -85,6 +86,10 @@ class SyncHarness {
         ]),
         'protocol_code': 'MassMarshVeg',
         if (plot == 1 && photoPathForFirstPlot != null) 'photo_local_path': photoPathForFirstPlot,
+        if (plot == 1 && additionalPhotosForFirstPlot.isNotEmpty)
+          'additional_photos': jsonEncode([
+            for (final (i, path) in additionalPhotosForFirstPlot.indexed) {'local_id': '$localId-extra-$i', 'path': path, 'url': null},
+          ]),
         'sync_status': 'pending',
       });
     }

@@ -6,6 +6,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:logger/logger.dart';
 import '../config/env.dart';
 import '../database/app_database.dart';
+import '../models/field_outing/additional_photo.dart';
 import 'app_logger.dart';
 import 'auth_cache.dart';
 import 'app_version_interceptor.dart';
@@ -538,6 +539,7 @@ class SyncService {
 
       // Synced outings can still have a failed photo, so they need a separate pass
       await retryPendingPhotoUploads();
+      await uploadPendingAdditionalPhotos();
 
       return successCount;
     } catch (e) {
@@ -628,7 +630,48 @@ class SyncService {
     return successCount;
   }
 
-  /// Get count of vegetation records whose photo still needs to be (re)uploaded
+  // Extra photos go after the plot has a server id; each is keyed by its own id so a retry never adds it twice
+  Future<int> uploadPendingAdditionalPhotos({int? outingId}) async {
+    if (!await hasConnectivity()) return 0;
+    final db = await _db.database;
+    final rows = await db.query(
+      'vegetation_records',
+      where: "server_id IS NOT NULL AND additional_photos IS NOT NULL AND additional_photos != ''"
+          "${outingId != null ? ' AND outing_id = ?' : ''}",
+      whereArgs: outingId != null ? [outingId] : null,
+    );
+    var uploaded = 0;
+    for (final row in rows) {
+      final photos = decodeAdditionalPhotos(row['additional_photos']);
+      final serverId = row['server_id'] as int;
+      var changed = false;
+      for (final photo in photos.where((p) => p.url == null)) {
+        final (url, error) = await _uploadPhoto(photo.path);
+        if (url == null) {
+          _logger.w('Additional photo ${photo.localId} not uploaded: $error');
+          continue;
+        }
+        try {
+          await _dio.post(
+            '/api/mobile/vegetation-records/$serverId/additional-photos',
+            data: {'local_id': photo.localId, 'photo_url': url},
+          );
+          photo.url = url;
+          changed = true;
+          uploaded++;
+        } catch (e) {
+          _logger.w('Failed to attach additional photo ${photo.localId} to record $serverId: $e');
+        }
+      }
+      if (changed) {
+        await db.update('vegetation_records', {'additional_photos': encodeAdditionalPhotos(photos)},
+            where: 'id = ?', whereArgs: [row['id']]);
+      }
+    }
+    return uploaded;
+  }
+
+  /// Get count of photos (plot photos and additional photos) that still need to be (re)uploaded
   Future<int> getPendingPhotoUploadsCount({int? outingId}) async {
     final db = await _db.database;
     final result = await db.rawQuery(
@@ -638,7 +681,17 @@ class SyncService {
       "${outingId != null ? ' AND outing_id = ?' : ''}",
       outingId != null ? [outingId] : [],
     );
-    return result.isNotEmpty ? (result.first['count'] as int? ?? 0) : 0;
+    final plotPhotos = result.isNotEmpty ? (result.first['count'] as int? ?? 0) : 0;
+    final extras = await db.query(
+      'vegetation_records',
+      columns: ['additional_photos'],
+      where: "server_id IS NOT NULL AND additional_photos IS NOT NULL"
+          "${outingId != null ? ' AND outing_id = ?' : ''}",
+      whereArgs: outingId != null ? [outingId] : null,
+    );
+    final extraPhotos = extras.fold<int>(
+        0, (sum, r) => sum + decodeAdditionalPhotos(r['additional_photos']).where((p) => p.url == null).length);
+    return plotPhotos + extraPhotos;
   }
 
   // Confirms with the server (not just the local flag) before ever resending,
@@ -684,7 +737,8 @@ class SyncService {
       uploadFailed = serverId == null;
     }
 
-    final photosUploaded = await retryPendingPhotoUploads(outingId: outingId);
+    final photosUploaded = await retryPendingPhotoUploads(outingId: outingId) +
+        await uploadPendingAdditionalPhotos(outingId: outingId);
     final photosStillPending = await getPendingPhotoUploadsCount(outingId: outingId);
 
     return ResyncResult(

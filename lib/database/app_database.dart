@@ -15,7 +15,7 @@ import 'seeds/template_seeds.dart';
 /// Main database class for MassMarsh app
 class AppDatabase {
   static const String _dbName = 'mass_marsh.db';
-  static const int _dbVersion = 13;
+  static const int _dbVersion = 14;
 
   static final AppDatabase _instance = AppDatabase._internal();
 
@@ -298,6 +298,9 @@ class AppDatabase {
     }
     if (oldVersion < 13) {
       await _addColumnIfMissing(db, 'vegetation_records', 'plot_end_state', 'TEXT');
+    }
+    if (oldVersion < 14) {
+      await _addColumnIfMissing(db, 'vegetation_records', 'additional_photos', 'TEXT');
     }
   }
 

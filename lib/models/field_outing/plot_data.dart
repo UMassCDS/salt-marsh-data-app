@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
+import 'additional_photo.dart';
 
 // Mutable, unlike the persisted SpeciesObservation in vegetation_record.dart
 class PlotSpeciesEntry {
@@ -41,6 +42,7 @@ class PlotData {
   DateTime? plotEndTime;
   // null until End Plot is pressed: 'ended' or 'ended_incomplete'
   String? endState;
+  List<AdditionalPhoto> additionalPhotos;
   final TextEditingController latController;
   final TextEditingController lngController;
   final TextEditingController plotIdController;
@@ -72,8 +74,10 @@ class PlotData {
     this.plotStartTime,
     this.plotEndTime,
     this.endState,
+    List<AdditionalPhoto>? additionalPhotos,
     List<String> pinnedCodes = const ['SPALT', 'SPPAT', 'BARE', 'DEAD'],
   })  : localId = localId ?? 'veg_${const Uuid().v4()}',
+        additionalPhotos = additionalPhotos ?? [],
         latController = TextEditingController(text: latitude == 0 ? '' : latitude.toString()),
         lngController = TextEditingController(text: longitude == 0 ? '' : longitude.toString()),
         plotIdController = TextEditingController(text: plotId),
@@ -142,6 +146,7 @@ class PlotData {
       plotStartTime: DateTime.tryParse(record['plot_start_time'] as String? ?? ''),
       plotEndTime: DateTime.tryParse(record['plot_end_time'] as String? ?? ''),
       endState: record['plot_end_state'] as String?,
+      additionalPhotos: decodeAdditionalPhotos(record['additional_photos']),
       pinnedCodes: pinnedCodes,
     );
   }

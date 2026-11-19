@@ -60,7 +60,8 @@ class LiveRun {
 
   String localId(String name) => 'e2e-$name-$id';
 
-  Future<int> seedOuting(SyncHarness harness, String localId, {int plots = 2, String? photoForFirstPlot}) async {
+  Future<int> seedOuting(SyncHarness harness, String localId,
+      {int plots = 2, String? photoForFirstPlot, List<String> additionalPhotosForFirstPlot = const []}) async {
     _seeded.add(localId);
     final db = await harness.db;
     final outingId = await db.insert('field_outings', {
@@ -78,6 +79,10 @@ class LiveRun {
       await db.insert('vegetation_records', {
         ...plotRow(localId, outingId, plot),
         if (plot == 1 && photoForFirstPlot != null) 'photo_local_path': photoForFirstPlot,
+        if (plot == 1 && additionalPhotosForFirstPlot.isNotEmpty)
+          'additional_photos': jsonEncode([
+            for (final (i, path) in additionalPhotosForFirstPlot.indexed) {'local_id': '$localId-extra-$i', 'path': path, 'url': null},
+          ]),
       });
     }
     return outingId;

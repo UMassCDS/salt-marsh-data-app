@@ -5,6 +5,7 @@ import '../../../services/species_service.dart';
 import '../../../utils/gps_quality.dart';
 import '../../../utils/photo_viewer.dart';
 import '../../../utils/plot_validation.dart';
+import 'additional_photos_section.dart';
 import 'end_plot.dart';
 import 'plot_text_field.dart';
 import 'plot_time_row.dart';
@@ -108,6 +109,9 @@ class PlotCard extends StatelessWidget {
   final ValueChanged<DateTime> onStartTimeChanged;
   final ValueChanged<DateTime> onEndTimeChanged;
   final VoidCallback onEndPlot;
+  final VoidCallback onTakeAdditionalPhoto;
+  final VoidCallback onChooseAdditionalPhoto;
+  final ValueChanged<String> onRemoveAdditionalPhoto;
 
   const PlotCard({
     super.key,
@@ -132,6 +136,9 @@ class PlotCard extends StatelessWidget {
     required this.onStartTimeChanged,
     required this.onEndTimeChanged,
     required this.onEndPlot,
+    required this.onTakeAdditionalPhoto,
+    required this.onChooseAdditionalPhoto,
+    required this.onRemoveAdditionalPhoto,
   });
 
   @override
@@ -485,6 +492,13 @@ class PlotCard extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 16),
+            AdditionalPhotosSection(
+              photos: plot.additionalPhotos,
+              onTake: onTakeAdditionalPhoto,
+              onChoose: onChooseAdditionalPhoto,
+              onRemove: onRemoveAdditionalPhoto,
             ),
 
             const SizedBox(height: 16),
