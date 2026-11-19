@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:native_exif/native_exif.dart';
 import 'package:uuid/uuid.dart';
+import '../../models/field_outing/additional_photo.dart';
 import '../../models/field_outing/draft_snapshot.dart';
 import '../../models/field_outing/field_outing.dart';
 import '../../models/field_outing/plot_data.dart';
@@ -225,6 +226,7 @@ class _FormScreenState extends ConsumerState<FormScreen>
         plot.plotStartTime,
         plot.plotEndTime,
         plot.endState,
+        plot.additionalPhotos.length,
         speciesSig,
       ].join('|');
     }).join(';');
@@ -921,6 +923,12 @@ class _FormScreenState extends ConsumerState<FormScreen>
                 _onEdited();
               },
               onEndPlot: () => _endPlot(plot),
+              onTakeAdditionalPhoto: () => _addAdditionalPhoto(index, ImageSource.camera),
+              onChooseAdditionalPhoto: () => _addAdditionalPhoto(index, ImageSource.gallery),
+              onRemoveAdditionalPhoto: (localId) {
+                setState(() => plot.additionalPhotos.removeWhere((p) => p.localId == localId));
+                _onEdited();
+              },
             )
           : CollapsedPlotSummary(
               plot: plot,
@@ -1138,6 +1146,27 @@ class _FormScreenState extends ConsumerState<FormScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error taking photo: $e')),
         );
+      }
+    }
+  }
+
+  // Same hand-off care as the main photo: flush first, stamp location before display
+  Future<void> _addAdditionalPhoto(int plotIndex, ImageSource source) async {
+    try {
+      await _autosave.flush();
+      final XFile? image = await _imagePicker.pickImage(source: source);
+      if (image == null || !mounted) return;
+      final permanentPath = await copyImageToPermanentStorage(image.path);
+      if (source == ImageSource.camera) await _stampPhotoLocation(permanentPath, plotIndex);
+      if (!mounted || plotIndex >= _plots.length) return;
+      setState(() => _plots[plotIndex].additionalPhotos.add(
+            AdditionalPhoto(localId: 'photo_${const Uuid().v4()}', path: permanentPath),
+          ));
+      _trackPlotTimes();
+      await _autosave.flush();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not add photo: $e')));
       }
     }
   }

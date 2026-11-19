@@ -12,6 +12,7 @@ bool plotHasEnteredData(PlotData plot) =>
     (plot.notes?.isNotEmpty ?? false) ||
     plot.photoPath != null ||
     plot.photoFile != null ||
+    plot.additionalPhotos.isNotEmpty ||
     plot.elevation != null ||
     (plot.subclass?.isNotEmpty ?? false);
 

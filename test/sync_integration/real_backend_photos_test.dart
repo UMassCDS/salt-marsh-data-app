@@ -41,6 +41,31 @@ void main() {
     );
 
     test(
+      'additional photos are stored, attached once to the right plot, and shown on the session',
+      skip: backendHasPhotoStorage ? null : 'set E2E_PHOTO_STORAGE=1 when the backend has photo storage',
+      () async {
+        final localId = live.localId('extra-photos');
+        final harness = await SyncHarness.createLive(baseUrl: baseUrl!, token: live.contributorToken);
+        addTearDown(harness.dispose);
+        final outingId = await live.seedOuting(harness, localId,
+            additionalPhotosForFirstPlot: [await writeTempPhoto(), await writeTempPhoto()]);
+
+        await harness.sync.uploadAllPendingOutings();
+        await harness.sync.uploadAllPendingOutings();
+
+        final serverId = (await harness.outing(outingId))['server_id'] as int;
+        final detail = await live.backend.sessionDetail(live.managerToken, live.orgId, serverId);
+        final extras = {
+          for (final plot in (detail['vegetation_records'] as List).cast<Map<String, dynamic>>())
+            '${plot['plot_number']}': (plot['additional_photos'] as List).cast<String>(),
+        };
+        expect(extras['1'], hasLength(2));
+        expect(extras['2'], isEmpty);
+        expect(await harness.sync.getPendingPhotoUploadsCount(), 0);
+      },
+    );
+
+    test(
       'when photo storage is down the outing still syncs and the photo waits to be retried',
       skip: backendHasPhotoStorage ? 'the backend has photo storage, so it cannot be down' : null,
       () async {

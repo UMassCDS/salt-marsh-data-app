@@ -58,6 +58,7 @@ class FakeBackend implements HttpClientAdapter {
   final List<Fault> faults;
   final Map<String, ServerSession> sessionsByLocalId = {};
   final Map<int, String> photoUrlByVegetationId = {};
+  final Map<int, Map<String, String>> additionalPhotosByVegetationId = {};
   final List<RecordedRequest> requests = [];
   final List<String> uploadedPhotos = [];
   final Map<String, int> _callCounts = {};
@@ -173,6 +174,13 @@ class FakeBackend implements HttpClientAdapter {
     final photoUpdate = RegExp(r'^/api/mobile/vegetation-records/(\d+)/photo$').firstMatch(path);
     if (method == 'PUT' && photoUpdate != null) {
       photoUrlByVegetationId[int.parse(photoUpdate.group(1)!)] = options.data['photo_url'] as String;
+      return _json({'success': true});
+    }
+
+    final extraPhoto = RegExp(r'^/api/mobile/vegetation-records/(\d+)/additional-photos$').firstMatch(path);
+    if (method == 'POST' && extraPhoto != null) {
+      final photos = additionalPhotosByVegetationId.putIfAbsent(int.parse(extraPhoto.group(1)!), () => {});
+      photos.putIfAbsent(options.data['local_id'] as String, () => options.data['photo_url'] as String);
       return _json({'success': true});
     }
 

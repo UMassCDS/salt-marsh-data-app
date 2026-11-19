@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mass_marsh_app/models/field_outing/additional_photo.dart';
 import 'package:mass_marsh_app/models/field_outing/plot_data.dart';
 import 'package:mass_marsh_app/utils/plot_timing.dart';
 
@@ -38,6 +39,7 @@ void main() {
       ('habitat', (p) => p.habitatType = 'Panne'),
       ('notes', (p) => p.notes = 'mud'),
       ('a photo', (p) => p.photoPath = '/tmp/p.jpg'),
+      ('an additional photo', (p) => p.additionalPhotos.add(AdditionalPhoto(localId: 'x', path: '/tmp/x.jpg'))),
       ('elevation', (p) => p.elevation = 1.2),
       ('subclass', (p) => p.subclass = 'Pool'),
     ]) {
