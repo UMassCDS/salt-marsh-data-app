@@ -40,8 +40,6 @@ void main() {
         distanceAlongTransect: 0,
         latitude: 0,
         longitude: 0,
-        canopyHeight: 0,
-        thatchHeight: 0,
         species: [
           // Non-zero on purpose - exercises the pinned-row clear (x) button,
           // which only renders when a pinned species has a value to clear
@@ -105,8 +103,6 @@ void main() {
         distanceAlongTransect: 0,
         latitude: 0,
         longitude: 0,
-        canopyHeight: 0,
-        thatchHeight: 0,
         species: [
           PlotSpeciesEntry(speciesCode: 'SPALT', percentageCover: 0),
           PlotSpeciesEntry(speciesCode: 'AGSTO', percentageCover: 0),

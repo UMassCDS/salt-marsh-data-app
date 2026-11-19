@@ -116,8 +116,8 @@ class DraftSnapshot {
       'plot_start_time': plot.plotStartTime == null ? null : isoWithOffset(plot.plotStartTime!),
       'plot_end_time': plot.plotEndTime == null ? null : isoWithOffset(plot.plotEndTime!),
       'elevation_m': plot.elevation,
-      'canopy_height_m': plot.canopyHeight,
-      'thatch_height_m': plot.thatchHeight,
+      'canopy_height_cm': plot.canopyHeightCm,
+      'thatch_height_cm': plot.thatchHeightCm,
       'species_observations': jsonEncode(plot.species
           .map((s) => {
                 'species_code': s.speciesCode,

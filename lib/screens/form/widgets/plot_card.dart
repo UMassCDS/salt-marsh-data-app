@@ -303,21 +303,23 @@ class PlotCard extends StatelessWidget {
             if (!(activeProtocol?.isFieldHidden('canopy_height_m') ?? false))
               PlotTextField(
                 field: 'canopyHeight',
-                currentValue: plot.canopyHeight == 0 ? '' : plot.canopyHeight.toString(),
-                label: 'Canopy Height (m)',
+                currentValue: plot.canopyHeightCm?.toString() ?? '',
+                label: 'Canopy Height (cm)',
                 icon: Icons.height,
                 isNumber: true,
                 allowNegative: false,
+                wholeNumber: true,
                 onChanged: onFieldChanged,
               ),
             if (!(activeProtocol?.isFieldHidden('thatch_height_m') ?? false))
               PlotTextField(
                 field: 'thatchHeight',
-                currentValue: plot.thatchHeight == 0 ? '' : plot.thatchHeight.toString(),
-                label: 'Thatch Height (m)',
+                currentValue: plot.thatchHeightCm?.toString() ?? '',
+                label: 'Thatch Height (cm)',
                 icon: Icons.height,
                 isNumber: true,
                 allowNegative: false,
+                wholeNumber: true,
                 onChanged: onFieldChanged,
               ),
             if (!(activeProtocol?.isFieldHidden('elevation_navd88_m') ?? false))

@@ -13,6 +13,7 @@ class PlotTextField extends StatelessWidget {
   final bool isDropdown;
   final bool isOptional;
   final bool allowNegative;
+  final bool wholeNumber;
   final int maxLines;
   final List<String>? dropdownOptions;
   final TextEditingController? controller;
@@ -29,6 +30,7 @@ class PlotTextField extends StatelessWidget {
     this.isDropdown = false,
     this.isOptional = false,
     this.allowNegative = true,
+    this.wholeNumber = false,
     this.maxLines = 1,
     this.dropdownOptions,
     this.controller,
@@ -76,11 +78,13 @@ class PlotTextField extends StatelessWidget {
           prefixIcon: Icon(icon),
         ),
         keyboardType: isNumber
-            ? TextInputType.numberWithOptions(decimal: true, signed: allowNegative)
+            ? TextInputType.numberWithOptions(decimal: !wholeNumber, signed: allowNegative)
             : TextInputType.text,
-        inputFormatters: isNumber && !allowNegative
-            ? [FilteringTextInputFormatter.deny(RegExp(r'-'))]
-            : null,
+        inputFormatters: wholeNumber
+            ? [FilteringTextInputFormatter.digitsOnly]
+            : isNumber && !allowNegative
+                ? [FilteringTextInputFormatter.deny(RegExp(r'-'))]
+                : null,
         maxLines: maxLines,
         onChanged: (value) => onChanged(field, value),
         validator: (value) {

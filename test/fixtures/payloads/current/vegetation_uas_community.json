@@ -15,7 +15,7 @@
   "vegetation_records": [
     {
       "accuracy_m": null,
-      "canopy_height_m": null,
+      "canopy_height_cm": null,
       "distance_along_transect_m": null,
       "elevation_m": null,
       "habitat_type": null,
@@ -42,7 +42,7 @@
         }
       ],
       "subclass": "High Marsh - Spartina patens dom.",
-      "thatch_height_m": null,
+      "thatch_height_cm": null,
       "transect_id": ""
     }
   ]

@@ -10,8 +10,6 @@ PlotData emptyPlot(int number) => PlotData(
       distanceAlongTransect: 0,
       latitude: 0,
       longitude: 0,
-      canopyHeight: 0,
-      thatchHeight: 0,
       species: [],
       rtkPointNumber: '7',
     );
@@ -27,14 +25,14 @@ void main() {
       updatePlotTimes([plot], t1);
       expect(plot.plotStartTime, isNull, reason: 'pre-filled transect, plot id and RTK number do not count');
 
-      plot.canopyHeight = 0.4;
+      plot.canopyHeightCm = 40;
       expect(updatePlotTimes([plot], t2), isTrue);
       expect(plot.plotStartTime, t2);
     });
 
     for (final (name, fill) in <(String, void Function(PlotData))>[
       ('species', (p) => p.species = [PlotSpeciesEntry(speciesCode: 'SPALT', percentageCover: 60)]),
-      ('thatch height', (p) => p.thatchHeight = 0.07),
+      ('thatch height', (p) => p.thatchHeightCm = 7),
       ('a GPS fix', (p) => p.latitude = 42.1),
       ('distance along the transect', (p) => p.distanceAlongTransect = -3),
       ('habitat', (p) => p.habitatType = 'Panne'),
@@ -52,9 +50,9 @@ void main() {
     }
 
     test('only once: later edits do not move the start', () {
-      final plot = emptyPlot(1)..canopyHeight = 0.4;
+      final plot = emptyPlot(1)..canopyHeightCm = 40;
       updatePlotTimes([plot], t1);
-      plot.thatchHeight = 0.07;
+      plot.thatchHeightCm = 7;
       expect(updatePlotTimes([plot], t2), isFalse);
       expect(plot.plotStartTime, t1);
     });
@@ -62,11 +60,11 @@ void main() {
 
   group('a plot ends', () {
     test('when the next plot starts', () {
-      final first = emptyPlot(1)..canopyHeight = 0.4;
+      final first = emptyPlot(1)..canopyHeightCm = 40;
       final second = emptyPlot(2);
       updatePlotTimes([first, second], t1);
 
-      second.canopyHeight = 0.3;
+      second.canopyHeightCm = 30;
       updatePlotTimes([first, second], t2);
 
       expect(first.plotEndTime, t2);
@@ -75,10 +73,10 @@ void main() {
     });
 
     test('going back to an earlier plot changes neither plot', () {
-      final first = emptyPlot(1)..canopyHeight = 0.4;
+      final first = emptyPlot(1)..canopyHeightCm = 40;
       final second = emptyPlot(2);
       updatePlotTimes([first, second], t1);
-      second.canopyHeight = 0.3;
+      second.canopyHeightCm = 30;
       updatePlotTimes([first, second], t2);
 
       first.notes = 'fixed a typo';
@@ -89,7 +87,7 @@ void main() {
     });
 
     test('the last plot ends when the session ends; plots never started stay empty', () {
-      final first = emptyPlot(1)..canopyHeight = 0.4;
+      final first = emptyPlot(1)..canopyHeightCm = 40;
       final untouched = emptyPlot(2);
       updatePlotTimes([first, untouched], t1);
 
@@ -101,7 +99,7 @@ void main() {
 
     test('a time set by hand is never overwritten', () {
       final plot = emptyPlot(1)
-        ..canopyHeight = 0.4
+        ..canopyHeightCm = 40
         ..plotStartTime = t1
         ..plotEndTime = t2;
       endOpenPlots([plot], t3);
