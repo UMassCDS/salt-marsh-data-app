@@ -65,6 +65,8 @@ final payloadScenarios = <PayloadScenario>[
       'plot_end_time': '2026-07-01T09:21:40-04:00',
       'elevation_m': 1.31,
       'canopy_height_cm': 45,
+      'quadrat_width_m': 0.71,
+      'quadrat_length_m': 0.71,
       'thatch_height_cm': 7,
       'species_observations': _species([('SPAL', 55), ('SPPAT', 30), ('BARE', 15)]),
       'notes': 'Dense stand, wrack at the edge',
@@ -77,6 +79,8 @@ final payloadScenarios = <PayloadScenario>[
       'accuracy_m': 11.8,
       'location_quality': 'gps_fair',
       'canopy_height_cm': 90,
+      'quadrat_width_m': 0.25,
+      'quadrat_length_m': 1.0,
       'thatch_height_cm': 12,
       'species_observations': _species([('SPAL', 100)]),
     });

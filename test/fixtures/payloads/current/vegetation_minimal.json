@@ -30,6 +30,8 @@
       "plot_number": 1,
       "plot_start_time": null,
       "protocol_code": "MassMarshVeg",
+      "quadrat_length_m": null,
+      "quadrat_width_m": null,
       "rtk_point_number": null,
       "species_observations": [
         {

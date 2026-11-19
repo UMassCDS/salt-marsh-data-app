@@ -43,6 +43,8 @@ class PlotData {
   // null until End Plot is pressed: 'ended' or 'ended_incomplete'
   String? endState;
   List<AdditionalPhoto> additionalPhotos;
+  double? quadratWidthM;
+  double? quadratLengthM;
   final TextEditingController latController;
   final TextEditingController lngController;
   final TextEditingController plotIdController;
@@ -75,6 +77,8 @@ class PlotData {
     this.plotEndTime,
     this.endState,
     List<AdditionalPhoto>? additionalPhotos,
+    this.quadratWidthM,
+    this.quadratLengthM,
     List<String> pinnedCodes = const ['SPALT', 'SPPAT', 'BARE', 'DEAD'],
   })  : localId = localId ?? 'veg_${const Uuid().v4()}',
         additionalPhotos = additionalPhotos ?? [],
@@ -147,6 +151,8 @@ class PlotData {
       plotEndTime: DateTime.tryParse(record['plot_end_time'] as String? ?? ''),
       endState: record['plot_end_state'] as String?,
       additionalPhotos: decodeAdditionalPhotos(record['additional_photos']),
+      quadratWidthM: (record['quadrat_width_m'] as num?)?.toDouble(),
+      quadratLengthM: (record['quadrat_length_m'] as num?)?.toDouble(),
       pinnedCodes: pinnedCodes,
     );
   }

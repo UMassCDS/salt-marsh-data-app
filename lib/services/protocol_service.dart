@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:sqflite/sqflite.dart' show ConflictAlgorithm;
 import '../config/env.dart';
 import '../database/app_database.dart';
+import '../models/quadrat.dart';
 import 'app_logger.dart';
 import 'sync_service.dart';
 
@@ -45,6 +46,7 @@ class ProtocolDefinition {
   final List<String> plotExtraFields;
   final ProtocolSpeciesConfig speciesConfig;
   final List<String>? subclassOptions;
+  final QuadratConfig quadrat;
 
   const ProtocolDefinition({
     required this.protocolCode,
@@ -54,6 +56,7 @@ class ProtocolDefinition {
     required this.plotExtraFields,
     required this.speciesConfig,
     this.subclassOptions,
+    this.quadrat = QuadratConfig.sopDefault,
   });
 
   /// Whether a named field should be hidden for this protocol.
@@ -82,6 +85,7 @@ class ProtocolDefinition {
       subclassOptions: (def['subclass_options'] as List<dynamic>?)
           ?.map((e) => e as String)
           .toList(),
+      quadrat: QuadratConfig.fromJson(def['quadrat_config'] as Map<String, dynamic>?),
     );
   }
 
