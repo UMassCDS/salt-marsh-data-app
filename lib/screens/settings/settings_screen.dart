@@ -10,9 +10,11 @@ import '../../providers/auth_provider.dart';
 import '../../providers/org_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../services/sync_service.dart';
+import '../../services/update_check.dart';
 import '../../utils/database_export_helper.dart';
 import '../../utils/sign_out_confirmation.dart';
 import '../../utils/snackbar_utils.dart';
+import '../home/update_banner.dart';
 import '../login_screen.dart';
 import 'widgets/sections.dart';
 
@@ -55,6 +57,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget build(BuildContext context) {
     final themeMode = ref.watch(themeModeProvider);
     final user = ref.watch(authProvider).user;
+    final update = ref.watch(availableUpdateProvider).value;
     final versionLabel = ref.watch(_packageInfoProvider).maybeWhen(
           data: (info) => 'v${info.version}',
           orElse: () => '',
@@ -65,6 +68,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         children: [
+          if (update != null) ...[
+            UpdateCard(update: update, showLater: false),
+            const SizedBox(height: 28),
+          ],
           AccountSection(user: user, onSignOut: _signOut),
           const SizedBox(height: 28),
           AppearanceSection(

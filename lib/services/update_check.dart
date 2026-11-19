@@ -25,9 +25,12 @@ int compareVersions(String a, String b) {
 }
 
 class AvailableUpdate {
-  const AvailableUpdate(this.version, this.url);
+  const AvailableUpdate(this.version, this.url, {this.installedVersion, this.dismissed = false});
   final String version;
   final String url;
+  final String? installedVersion;
+  // Dismissed updates leave the home screen but stay listed in Settings
+  final bool dismissed;
 }
 
 // What the last successful check found, kept on the device so most launches need no network at all
@@ -116,13 +119,15 @@ class UpdateChecker {
     }
     final latest = state.latestVersion;
     final url = state.url;
-    if (latest == null || url == null || latest == state.dismissed) return null;
+    if (latest == null || url == null) return null;
+    final String installed;
     try {
-      if (compareVersions(latest, await _installedVersion()) <= 0) return null;
+      installed = await _installedVersion();
+      if (compareVersions(latest, installed) <= 0) return null;
     } catch (_) {
       return null;
     }
-    return AvailableUpdate(latest, url);
+    return AvailableUpdate(latest, url, installedVersion: installed.split('+').first, dismissed: latest == state.dismissed);
   }
 
   Future<void> dismiss(String version) async {

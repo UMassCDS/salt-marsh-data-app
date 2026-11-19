@@ -9,6 +9,7 @@ import '../providers/org_provider.dart';
 import '../services/protocol_service.dart';
 import '../services/species_service.dart';
 import 'form/form_screen.dart';
+import '../services/update_check.dart';
 import 'home/update_banner.dart';
 import 'outings/drafts_screen.dart';
 
@@ -113,6 +114,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final signedInOffline = ref.watch(authProvider.select((s) => s.signedInOffline));
+    final updateAvailable = ref.watch(availableUpdateProvider).value != null;
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final orgName = ref.watch(selectedOrgProvider)?.name ?? '';
@@ -290,7 +292,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   _QuickLinkTile(
                     icon: Icons.settings_outlined,
                     label: 'Settings',
-                    subtitle: 'Theme and preferences',
+                    subtitle: updateAvailable ? 'App update available' : 'Theme and preferences',
+                    showBadge: updateAvailable,
                     iconColor: colorScheme.secondary,
                     onTap: () => Navigator.of(context).pushNamed('/settings'),
                   ),
@@ -397,6 +400,7 @@ class _QuickLinkTile extends StatelessWidget {
   final String subtitle;
   final Color iconColor;
   final VoidCallback onTap;
+  final bool showBadge;
 
   const _QuickLinkTile({
     required this.icon,
@@ -404,6 +408,7 @@ class _QuickLinkTile extends StatelessWidget {
     required this.subtitle,
     required this.iconColor,
     required this.onTap,
+    this.showBadge = false,
   });
 
   @override
@@ -413,20 +418,25 @@ class _QuickLinkTile extends StatelessWidget {
 
     return ListTile(
       onTap: onTap,
-      leading: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: iconColor.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(10),
+      leading: Badge(
+        isLabelVisible: showBadge,
+        smallSize: 10,
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: iconColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: iconColor, size: 22),
         ),
-        child: Icon(icon, color: iconColor, size: 22),
       ),
       title: Text(label,
           style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
       subtitle: Text(subtitle,
-          style: textTheme.bodySmall
-              ?.copyWith(color: colorScheme.onSurface.withValues(alpha: 0.55))),
+          style: showBadge
+              ? textTheme.bodySmall?.copyWith(color: colorScheme.error, fontWeight: FontWeight.w600)
+              : textTheme.bodySmall?.copyWith(color: colorScheme.onSurface.withValues(alpha: 0.55))),
       trailing: Icon(Icons.chevron_right,
           color: colorScheme.onSurface.withValues(alpha: 0.35)),
     );

@@ -10,7 +10,11 @@ class _FakeChecker extends UpdateChecker {
   String? dismissed;
 
   @override
-  Future<AvailableUpdate?> check() async => _update?.version == dismissed ? null : _update;
+  Future<AvailableUpdate?> check() async {
+    final update = _update;
+    if (update == null) return null;
+    return AvailableUpdate(update.version, update.url, installedVersion: update.installedVersion, dismissed: update.version == dismissed);
+  }
 
   @override
   Future<void> dismiss(String version) async => dismissed = version;
@@ -23,18 +27,29 @@ Widget _app(UpdateChecker checker) => ProviderScope(
 
 void main() {
   testWidgets('offers a newer version and hides once dismissed', (tester) async {
-    final checker = _FakeChecker(const AvailableUpdate('0.8.0', 'https://example.org/releases/v0.8.0'));
+    final checker = _FakeChecker(const AvailableUpdate('0.8.0', 'https://example.org/releases/v0.8.0', installedVersion: '0.7.0'));
     await tester.pumpWidget(_app(checker));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('0.8.0 is available'), findsOneWidget);
-    expect(find.text('Download'), findsOneWidget);
+    expect(find.text('New app version available'), findsOneWidget);
+    expect(find.text('v0.7.0 → v0.8.0'), findsOneWidget);
+    expect(find.text('Update'), findsOneWidget);
 
     await tester.tap(find.text('Later'));
     await tester.pumpAndSettle();
 
     expect(checker.dismissed, '0.8.0');
-    expect(find.textContaining('is available'), findsNothing);
+    expect(find.text('New app version available'), findsNothing);
+  });
+
+  testWidgets('the Settings card has no Later button and stays after dismissing', (tester) async {
+    await tester.pumpWidget(const MaterialApp(
+      home: ProviderScope(
+        child: Scaffold(body: UpdateCard(update: AvailableUpdate('0.8.0', 'https://example.org', dismissed: true), showLater: false)),
+      ),
+    ));
+    expect(find.text('Update'), findsOneWidget);
+    expect(find.text('Later'), findsNothing);
   });
 
   testWidgets('shows nothing when the app is up to date', (tester) async {
