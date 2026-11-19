@@ -7,6 +7,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:native_exif/native_exif.dart';
 import 'package:uuid/uuid.dart';
 import '../../models/field_outing/additional_photo.dart';
+import '../../models/quadrat.dart';
 import '../../models/field_outing/draft_snapshot.dart';
 import '../../models/field_outing/field_outing.dart';
 import '../../models/field_outing/plot_data.dart';
@@ -227,6 +228,8 @@ class _FormScreenState extends ConsumerState<FormScreen>
         plot.plotEndTime,
         plot.endState,
         plot.additionalPhotos.length,
+        plot.quadratWidthM,
+        plot.quadratLengthM,
         speciesSig,
       ].join('|');
     }).join(';');
@@ -336,6 +339,7 @@ class _FormScreenState extends ConsumerState<FormScreen>
             final wasClean = !_isDirty;
             setState(() {
               _activeProtocol = protocol;
+              applyQuadratDefault(_plots, protocol.quadrat);
               // Seed RTK point number to "1" for the first plot if the protocol uses it
               if (protocol.hasExtraField('rtk_point_number') &&
                   _plots.isNotEmpty &&
@@ -427,6 +431,7 @@ class _FormScreenState extends ConsumerState<FormScreen>
                         const ['SPALT', 'SPPAT', 'BARE', 'DEAD'],
                   ))
               .toList();
+          if (_activeProtocol != null) applyQuadratDefault(_plots, _activeProtocol!.quadrat);
           _expandedPlotLocalId = _plots.isEmpty ? null : _plots.last.localId;
         });
       } else if (widget.monitoringType == 'hydrology') {
@@ -923,6 +928,13 @@ class _FormScreenState extends ConsumerState<FormScreen>
                 _onEdited();
               },
               onEndPlot: () => _endPlot(plot),
+              onQuadratChanged: (width, length) {
+                setState(() {
+                  plot.quadratWidthM = width;
+                  plot.quadratLengthM = length;
+                });
+                _onEdited();
+              },
               onTakeAdditionalPhoto: () => _addAdditionalPhoto(index, ImageSource.camera),
               onChooseAdditionalPhoto: () => _addAdditionalPhoto(index, ImageSource.gallery),
               onRemoveAdditionalPhoto: (localId) {
@@ -1051,6 +1063,8 @@ class _FormScreenState extends ConsumerState<FormScreen>
         species: [],
         rtkPointNumber: autoRtk,
         pinnedCodes: _activeProtocol?.speciesConfig.pinnedSpecies ?? const ['SPALT', 'SPPAT', 'BARE', 'DEAD'],
+        quadratWidthM: (_activeProtocol?.quadrat ?? QuadratConfig.sopDefault).widthM,
+        quadratLengthM: (_activeProtocol?.quadrat ?? QuadratConfig.sopDefault).lengthM,
       );
       _plots.add(newPlot);
       _expandedPlotLocalId = newPlot.localId;

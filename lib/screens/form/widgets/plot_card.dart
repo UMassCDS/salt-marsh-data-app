@@ -7,6 +7,7 @@ import '../../../utils/photo_viewer.dart';
 import '../../../utils/plot_validation.dart';
 import 'additional_photos_section.dart';
 import 'end_plot.dart';
+import 'quadrat_picker.dart';
 import 'plot_text_field.dart';
 import 'plot_time_row.dart';
 import 'species_cover_input.dart';
@@ -112,6 +113,7 @@ class PlotCard extends StatelessWidget {
   final VoidCallback onTakeAdditionalPhoto;
   final VoidCallback onChooseAdditionalPhoto;
   final ValueChanged<String> onRemoveAdditionalPhoto;
+  final void Function(double widthM, double lengthM) onQuadratChanged;
 
   const PlotCard({
     super.key,
@@ -139,6 +141,7 @@ class PlotCard extends StatelessWidget {
     required this.onTakeAdditionalPhoto,
     required this.onChooseAdditionalPhoto,
     required this.onRemoveAdditionalPhoto,
+    required this.onQuadratChanged,
   });
 
   @override
@@ -179,6 +182,12 @@ class PlotCard extends StatelessWidget {
                 ),
               ],
             ),
+            // Hidden when the org fixes the size; the default is still saved on the plot
+            if (activeProtocol?.quadrat.allowOverride ?? true)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: QuadratChip(widthM: plot.quadratWidthM, lengthM: plot.quadratLengthM, onChanged: onQuadratChanged),
+              ),
             const SizedBox(height: 8),
             PlotTimeRow(
               start: plot.plotStartTime,

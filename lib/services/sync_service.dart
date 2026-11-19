@@ -225,6 +225,8 @@ class SyncService {
       'elevation_m': veg['elevation_m'],
       'canopy_height_cm': veg['canopy_height_cm'],
       'thatch_height_cm': veg['thatch_height_cm'],
+      'quadrat_width_m': veg['quadrat_width_m'],
+      'quadrat_length_m': veg['quadrat_length_m'],
       'species_observations': jsonDecode(veg['species_observations'] as String),
       'photo_url': photoUrl,
       'notes': veg['notes'],

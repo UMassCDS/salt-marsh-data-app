@@ -45,6 +45,9 @@ void main() {
           p['plot_number']: (p['plot_start_time'], p['plot_end_time']),
       };
       expect(times, {1: (plotOneStart, plotOneEnd), 2: (null, null)});
+      for (final p in (detail['vegetation_records'] as List).cast<Map<String, dynamic>>()) {
+        expect((p['canopy_height_cm'], p['quadrat_width_m'], p['quadrat_length_m']), (45, 0.71, 0.71), reason: 'plot ${p['plot_number']}');
+      }
     });
 
     test('sending the same outing again does not create a second session', () async {

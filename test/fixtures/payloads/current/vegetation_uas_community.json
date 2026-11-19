@@ -30,6 +30,8 @@
       "plot_number": 1,
       "plot_start_time": null,
       "protocol_code": "UASCommunity",
+      "quadrat_length_m": null,
+      "quadrat_width_m": null,
       "rtk_point_number": "RTK-0042",
       "species_observations": [
         {

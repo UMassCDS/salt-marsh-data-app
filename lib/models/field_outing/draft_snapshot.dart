@@ -118,6 +118,8 @@ class DraftSnapshot {
       'plot_end_time': plot.plotEndTime == null ? null : isoWithOffset(plot.plotEndTime!),
       'plot_end_state': plot.endState,
       'additional_photos': encodeAdditionalPhotos(plot.additionalPhotos),
+      'quadrat_width_m': plot.quadratWidthM,
+      'quadrat_length_m': plot.quadratLengthM,
       'elevation_m': plot.elevation,
       'canopy_height_cm': plot.canopyHeightCm,
       'thatch_height_cm': plot.thatchHeightCm,
