@@ -4,6 +4,8 @@ import '../../../services/protocol_service.dart';
 import '../../../services/species_service.dart';
 import '../../../utils/gps_quality.dart';
 import '../../../utils/photo_viewer.dart';
+import '../../../utils/plot_validation.dart';
+import 'end_plot.dart';
 import 'plot_text_field.dart';
 import 'plot_time_row.dart';
 import 'species_cover_input.dart';
@@ -59,6 +61,8 @@ class CollapsedPlotSummary extends StatelessWidget {
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                 color: colorScheme.onSurface.withValues(alpha: 0.6),
                               )),
+                    const SizedBox(height: 2),
+                    PlotEndStatus(endState: plot.endState, endTime: plot.plotEndTime),
                   ],
                 ),
               ),
@@ -103,6 +107,7 @@ class PlotCard extends StatelessWidget {
   final VoidCallback onSpeciesChanged;
   final ValueChanged<DateTime> onStartTimeChanged;
   final ValueChanged<DateTime> onEndTimeChanged;
+  final VoidCallback onEndPlot;
 
   const PlotCard({
     super.key,
@@ -126,10 +131,13 @@ class PlotCard extends StatelessWidget {
     required this.onSpeciesChanged,
     required this.onStartTimeChanged,
     required this.onEndTimeChanged,
+    required this.onEndPlot,
   });
 
   @override
   Widget build(BuildContext context) {
+    // A plot ended with missing values must not block submitting the session
+    final relaxed = plot.endState == plotEndedIncomplete;
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       child: Padding(
@@ -176,6 +184,7 @@ class PlotCard extends StatelessWidget {
             if (!(activeProtocol?.isFieldHidden('transect_id') ?? false))
               PlotTextField(
                 field: 'transectId',
+                isOptional: relaxed,
                 currentValue: plot.transectId,
                 label: 'Transect ID',
                 icon: Icons.timeline,
@@ -193,6 +202,7 @@ class PlotCard extends StatelessWidget {
             if (!(activeProtocol?.isFieldHidden('habitat_type') ?? false))
               PlotTextField(
                 field: 'habitatType',
+                isOptional: relaxed,
                 currentValue: plot.habitatType,
                 label: 'Habitat Type',
                 icon: Icons.terrain,
@@ -203,6 +213,7 @@ class PlotCard extends StatelessWidget {
             if (!(activeProtocol?.isFieldHidden('distance_along_transect_m') ?? false))
               PlotTextField(
                 field: 'distanceAlongTransect',
+                isOptional: relaxed,
                 currentValue: plot.distanceAlongTransect == 0 ? '' : plot.distanceAlongTransect.toString(),
                 label: 'Distance Along Transect (m)',
                 icon: Icons.straighten,
@@ -211,6 +222,7 @@ class PlotCard extends StatelessWidget {
               ),
             PlotTextField(
               field: 'latitude',
+              isOptional: relaxed,
               currentValue: '',
               label: 'Latitude',
               icon: Icons.location_on,
@@ -220,6 +232,7 @@ class PlotCard extends StatelessWidget {
             ),
             PlotTextField(
               field: 'longitude',
+              isOptional: relaxed,
               currentValue: '',
               label: 'Longitude',
               icon: Icons.location_on,
@@ -303,6 +316,7 @@ class PlotCard extends StatelessWidget {
             if (!(activeProtocol?.isFieldHidden('canopy_height_m') ?? false))
               PlotTextField(
                 field: 'canopyHeight',
+                isOptional: relaxed,
                 currentValue: plot.canopyHeightCm?.toString() ?? '',
                 label: 'Canopy Height (cm)',
                 icon: Icons.height,
@@ -314,6 +328,7 @@ class PlotCard extends StatelessWidget {
             if (!(activeProtocol?.isFieldHidden('thatch_height_m') ?? false))
               PlotTextField(
                 field: 'thatchHeight',
+                isOptional: relaxed,
                 currentValue: plot.thatchHeightCm?.toString() ?? '',
                 label: 'Thatch Height (cm)',
                 icon: Icons.height,
@@ -485,6 +500,8 @@ class PlotCard extends StatelessWidget {
               pinnedCodes: activeProtocol?.speciesConfig.pinnedSpecies ?? const ['SPALT', 'SPPAT', 'BARE', 'DEAD'],
               require100Percent: activeProtocol?.speciesConfig.require100Percent ?? true,
             ),
+            const SizedBox(height: 16),
+            EndPlotButton(endState: plot.endState, onPressed: onEndPlot),
           ],
         ),
       ),

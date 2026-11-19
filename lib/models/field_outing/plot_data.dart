@@ -39,6 +39,8 @@ class PlotData {
   String? rtkPointNumber;
   DateTime? plotStartTime;
   DateTime? plotEndTime;
+  // null until End Plot is pressed: 'ended' or 'ended_incomplete'
+  String? endState;
   final TextEditingController latController;
   final TextEditingController lngController;
   final TextEditingController plotIdController;
@@ -69,6 +71,7 @@ class PlotData {
     this.rtkPointNumber,
     this.plotStartTime,
     this.plotEndTime,
+    this.endState,
     List<String> pinnedCodes = const ['SPALT', 'SPPAT', 'BARE', 'DEAD'],
   })  : localId = localId ?? 'veg_${const Uuid().v4()}',
         latController = TextEditingController(text: latitude == 0 ? '' : latitude.toString()),
@@ -138,6 +141,7 @@ class PlotData {
       rtkPointNumber: record['rtk_point_number'] as String?,
       plotStartTime: DateTime.tryParse(record['plot_start_time'] as String? ?? ''),
       plotEndTime: DateTime.tryParse(record['plot_end_time'] as String? ?? ''),
+      endState: record['plot_end_state'] as String?,
       pinnedCodes: pinnedCodes,
     );
   }
