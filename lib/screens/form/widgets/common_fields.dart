@@ -74,6 +74,7 @@ class AppTextField extends StatelessWidget {
   final TextInputType inputType;
   final int maxLines;
   final bool isOptional;
+  final bool clearable;
 
   const AppTextField(
     this.controller,
@@ -83,6 +84,7 @@ class AppTextField extends StatelessWidget {
     this.inputType = TextInputType.text,
     this.maxLines = 1,
     this.isOptional = false,
+    this.clearable = false,
   });
 
   @override
@@ -95,6 +97,20 @@ class AppTextField extends StatelessWidget {
           labelText: label,
           border: OutlineInputBorder(),
           prefixIcon: Icon(icon),
+          suffixIcon: clearable
+              ? ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: controller,
+                  builder: (context, value, _) => value.text.isEmpty
+                      ? const SizedBox.shrink()
+                      : IconButton(
+                          icon: const Icon(Icons.cancel),
+                          iconSize: 26,
+                          constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                          tooltip: 'Clear $label',
+                          onPressed: controller.clear,
+                        ),
+                )
+              : null,
         ),
         keyboardType: inputType,
         maxLines: maxLines,
