@@ -115,6 +115,7 @@ class DraftSnapshot {
       'location_quality': plot.locationQuality,
       'plot_start_time': plot.plotStartTime == null ? null : isoWithOffset(plot.plotStartTime!),
       'plot_end_time': plot.plotEndTime == null ? null : isoWithOffset(plot.plotEndTime!),
+      'plot_end_state': plot.endState,
       'elevation_m': plot.elevation,
       'canopy_height_cm': plot.canopyHeightCm,
       'thatch_height_cm': plot.thatchHeightCm,

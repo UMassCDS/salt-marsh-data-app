@@ -5,8 +5,8 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import '../support/known_gap.dart';
 import '../support/sync_harness.dart' show useInMemorySqlite;
 
-const currentVersion = 12;
-const oldVersions = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+const currentVersion = 13;
+const oldVersions = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
 // Only v7 and later ever shipped in a tagged release; v1 and v2 fixtures are reconstructed from the migrations
 const knownGaps = <String, Map<int, String>>{

@@ -15,7 +15,7 @@ import 'seeds/template_seeds.dart';
 /// Main database class for MassMarsh app
 class AppDatabase {
   static const String _dbName = 'mass_marsh.db';
-  static const int _dbVersion = 12;
+  static const int _dbVersion = 13;
 
   static final AppDatabase _instance = AppDatabase._internal();
 
@@ -295,6 +295,9 @@ class AppDatabase {
           'UPDATE vegetation_records SET canopy_height_cm = CAST(ROUND(canopy_height_m * 100) AS INTEGER) WHERE canopy_height_m IS NOT NULL AND canopy_height_cm IS NULL');
       await db.execute(
           'UPDATE vegetation_records SET thatch_height_cm = CAST(ROUND(thatch_height_m * 100) AS INTEGER) WHERE thatch_height_m IS NOT NULL AND thatch_height_cm IS NULL');
+    }
+    if (oldVersion < 13) {
+      await _addColumnIfMissing(db, 'vegetation_records', 'plot_end_state', 'TEXT');
     }
   }
 

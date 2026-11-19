@@ -24,6 +24,8 @@ import '../../utils/id_utils.dart';
 import '../../utils/photo_storage.dart';
 import '../../utils/snackbar_utils.dart';
 import '../../utils/plot_timing.dart';
+import '../../utils/plot_validation.dart';
+import 'widgets/end_plot.dart';
 import '../../utils/time_format.dart';
 import 'widgets/action_bar.dart';
 import 'widgets/common_fields.dart';
@@ -222,6 +224,7 @@ class _FormScreenState extends ConsumerState<FormScreen>
         plot.rtkPointNumberController.text,
         plot.plotStartTime,
         plot.plotEndTime,
+        plot.endState,
         speciesSig,
       ].join('|');
     }).join(';');
@@ -917,12 +920,32 @@ class _FormScreenState extends ConsumerState<FormScreen>
                 setState(() => plot.plotEndTime = t);
                 _onEdited();
               },
+              onEndPlot: () => _endPlot(plot),
             )
           : CollapsedPlotSummary(
               plot: plot,
               onTap: () => setState(() => _expandedPlotLocalId = plot.localId),
             ),
     );
+  }
+
+  Future<void> _endPlot(PlotData plot) async {
+    final missing = missingPlotFields(plot, _activeProtocol);
+    if (missing.isNotEmpty) {
+      final endAnyway = await showEndPlotMissingDialog(context, plot.plotNumber, missing);
+      if (endAnyway != true || !mounted) return;
+    }
+    setState(() {
+      endPlot(plot, DateTime.now(), complete: missing.isEmpty);
+      if (_expandedPlotLocalId == plot.localId) _expandedPlotLocalId = null;
+    });
+    _onEdited();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(missing.isEmpty ? 'Plot ${plot.plotNumber} ended' : 'Plot ${plot.plotNumber} ended with ${missing.length} missing'),
+        duration: const Duration(seconds: 2),
+      ));
+    }
   }
 
   void _deletePlot(int index) {
