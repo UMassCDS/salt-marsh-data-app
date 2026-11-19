@@ -13,6 +13,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/field_outing_provider.dart';
 import '../../providers/org_provider.dart';
 import '../../services/draft_autosave.dart';
+import '../../services/session_defaults.dart';
 import '../../services/species_service.dart';
 import '../../services/protocol_service.dart';
 import '../../utils/capture_feedback.dart';
@@ -72,6 +73,7 @@ class _FormScreenState extends ConsumerState<FormScreen>
   final Map<String, double> _gpsLiveAccuracy = {};
   final Map<String, VoidCallback> _gpsStoppers = {};
   final _gpsWarmup = GpsWarmup();
+  final _sessionDefaults = SessionDefaultsStore();
 
   // Image picker
   final ImagePicker _imagePicker = ImagePicker();
@@ -365,7 +367,18 @@ class _FormScreenState extends ConsumerState<FormScreen>
     // Load draft data if draftId is provided
     if (widget.draftId != null) {
       _loadDraftData();
+    } else {
+      _prefillSiteAndTeam();
     }
+  }
+
+  Future<void> _prefillSiteAndTeam() async {
+    final defaults = await _sessionDefaults.load(ref.read(selectedOrgProvider)?.id);
+    if (!mounted) return;
+    final wasClean = !_isDirty;
+    if (_siteNameController.text.isEmpty && defaults.siteName != null) _siteNameController.text = defaults.siteName!;
+    if (_otherMembersController.text.isEmpty && defaults.otherMembers != null) _otherMembersController.text = defaults.otherMembers!;
+    if (wasClean) _markClean();
   }
 
   Future<void> _loadDraftData() async {
@@ -776,8 +789,8 @@ class _FormScreenState extends ConsumerState<FormScreen>
                                 ref.watch(authProvider).user?.fullName ?? '',
                                 Icons.person,
                               ),
-                              AppTextField(_siteNameController, 'Site Name', Icons.location_on),
-                              AppTextField(_otherMembersController, 'Other Team Members', Icons.people, maxLines: 2),
+                              AppTextField(_siteNameController, 'Site Name', Icons.location_on, clearable: true),
+                              AppTextField(_otherMembersController, 'Other Team Members', Icons.people, maxLines: 2, clearable: true),
                               TimeField(_startTimeController, 'Start Time'),
                               TimeField(_endTimeController, 'End Time'),
                               VisibilitySelector(
@@ -1321,6 +1334,7 @@ class _FormScreenState extends ConsumerState<FormScreen>
 
       _currentDraftId = null;
       _markClean();
+      unawaited(_sessionDefaults.save(outing.orgId, siteName: outing.siteName, otherMembers: outing.otherMembers));
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
