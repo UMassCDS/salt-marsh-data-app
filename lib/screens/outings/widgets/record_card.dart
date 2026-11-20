@@ -6,7 +6,17 @@ import '../../../utils/photo_viewer.dart';
 class RecordCard extends StatelessWidget {
   final int index;
   final Map<String, dynamic> record;
-  const RecordCard({super.key, required this.index, required this.record});
+  final bool sessionUploaded;
+  final VoidCallback? onRetry;
+  final bool retrying;
+  const RecordCard({
+    super.key,
+    required this.index,
+    required this.record,
+    this.sessionUploaded = true,
+    this.onRetry,
+    this.retrying = false,
+  });
 
   static const _skip = {
     'id',
@@ -108,6 +118,9 @@ class RecordCard extends StatelessWidget {
               _PhotoStatusBadge(
                 synced: photoSynced,
                 error: photoSynced ? null : photoUploadError,
+                sessionUploaded: sessionUploaded,
+                onRetry: onRetry,
+                retrying: retrying,
               ),
             ] else if (photoSynced) ...[
               const SizedBox(height: 10),
@@ -189,7 +202,16 @@ class RecordCard extends StatelessWidget {
 class _PhotoStatusBadge extends StatelessWidget {
   final bool synced;
   final String? error;
-  const _PhotoStatusBadge({required this.synced, this.error});
+  final bool sessionUploaded;
+  final VoidCallback? onRetry;
+  final bool retrying;
+  const _PhotoStatusBadge({
+    required this.synced,
+    this.error,
+    this.sessionUploaded = true,
+    this.onRetry,
+    this.retrying = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -207,10 +229,11 @@ class _PhotoStatusBadge extends StatelessWidget {
     } else {
       color = Colors.amber.shade800;
       bg = Colors.amber.withValues(alpha: 0.12);
-      label = 'Photo pending upload';
+      label = sessionUploaded ? 'Photo pending upload' : 'Waiting for the session to upload';
     }
 
     final hasReason = error != null && error!.isNotEmpty;
+    final canRetry = !synced && onRetry != null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -236,6 +259,15 @@ class _PhotoStatusBadge extends StatelessWidget {
                 ),
           ),
         ],
+        if (canRetry)
+          TextButton.icon(
+            style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+            onPressed: retrying ? null : onRetry,
+            icon: retrying
+                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(Icons.refresh),
+            label: const Text('Retry upload'),
+          ),
       ],
     );
   }
