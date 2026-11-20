@@ -1,3 +1,4 @@
+import '../../../constants/species_constants.dart';
 import 'package:flutter/material.dart';
 import '../../../models/field_outing/plot_data.dart';
 import '../../../services/protocol_service.dart';
@@ -520,7 +521,7 @@ class PlotCard extends StatelessWidget {
               allSpecies: allSpecies,
               onChanged: onSpeciesChanged,
               coverIncrement: activeProtocol?.speciesConfig.coverIncrement ?? 1,
-              pinnedCodes: activeProtocol?.speciesConfig.pinnedSpecies ?? const ['SPALT', 'SPPAT', 'BARE', 'DEAD'],
+              pinnedCodes: activeProtocol?.speciesConfig.pinnedSpecies ?? kDefaultPinnedSpecies,
               require100Percent: activeProtocol?.speciesConfig.require100Percent ?? true,
             ),
             const SizedBox(height: 16),

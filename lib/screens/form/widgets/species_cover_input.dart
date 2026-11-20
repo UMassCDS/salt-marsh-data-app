@@ -39,7 +39,7 @@ class SpeciesCoverInput extends StatefulWidget {
     required this.allSpecies,
     required this.onChanged,
     this.coverIncrement = 1,
-    this.pinnedCodes = const ['SPALT', 'SPPAT', 'BARE', 'DEAD'],
+    this.pinnedCodes = kDefaultPinnedSpecies,
     this.require100Percent = false,
   });
 
@@ -49,8 +49,10 @@ class SpeciesCoverInput extends StatefulWidget {
 
 class SpeciesCoverInputState extends State<SpeciesCoverInput> {
   static const _pinnedLabels = {
-    'SPALT': 'Smooth Cordgrass',
-    'SPPAT': 'Salt Meadow Cordgrass',
+    'SPALT': 'Saltwater Cordgrass',
+    'SPPAT': 'Salt Meadow Grass',
+    'DISPI': 'Spike Grass',
+    'SADEP': 'Common Glasswort',
     'BARE': 'Bare Ground',
     'DEAD': 'Dead Vegetation',
   };
