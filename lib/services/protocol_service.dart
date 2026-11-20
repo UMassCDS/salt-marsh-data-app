@@ -1,3 +1,4 @@
+import '../constants/species_constants.dart';
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:sqflite/sqflite.dart' show ConflictAlgorithm;
@@ -98,7 +99,7 @@ class ProtocolDefinition {
       hiddenFields: [],
       plotExtraFields: [],
       speciesConfig: ProtocolSpeciesConfig(
-        pinnedSpecies: ['SPALT', 'SPPAT', 'BARE', 'DEAD'],
+        pinnedSpecies: kDefaultPinnedSpecies,
         require100Percent: true,
         coverIncrement: 1,
         minSpecies: 0,

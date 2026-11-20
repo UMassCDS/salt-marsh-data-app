@@ -1,3 +1,4 @@
+import '../../constants/species_constants.dart';
 import 'dart:convert';
 import 'dart:io';
 
@@ -79,7 +80,7 @@ class PlotData {
     List<AdditionalPhoto>? additionalPhotos,
     this.quadratWidthM,
     this.quadratLengthM,
-    List<String> pinnedCodes = const ['SPALT', 'SPPAT', 'BARE', 'DEAD'],
+    List<String> pinnedCodes = kDefaultPinnedSpecies,
   })  : localId = localId ?? 'veg_${const Uuid().v4()}',
         additionalPhotos = additionalPhotos ?? [],
         latController = TextEditingController(text: latitude == 0 ? '' : latitude.toString()),
@@ -108,7 +109,7 @@ class PlotData {
   // set, so this resolves it from disk here.
   factory PlotData.fromDraftRow(
     Map<String, dynamic> record, {
-    List<String> pinnedCodes = const ['SPALT', 'SPPAT', 'BARE', 'DEAD'],
+    List<String> pinnedCodes = kDefaultPinnedSpecies,
   }) {
     List<PlotSpeciesEntry> species = [];
     if (record['species_observations'] != null) {

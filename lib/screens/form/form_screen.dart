@@ -1,3 +1,4 @@
+import '../../constants/species_constants.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
@@ -428,7 +429,7 @@ class _FormScreenState extends ConsumerState<FormScreen>
               .map((record) => PlotData.fromDraftRow(
                     record,
                     pinnedCodes: _activeProtocol?.speciesConfig.pinnedSpecies ??
-                        const ['SPALT', 'SPPAT', 'BARE', 'DEAD'],
+                        kDefaultPinnedSpecies,
                   ))
               .toList();
           if (_activeProtocol != null) applyQuadratDefault(_plots, _activeProtocol!.quadrat);
@@ -1062,7 +1063,7 @@ class _FormScreenState extends ConsumerState<FormScreen>
         longitude: 0,
         species: [],
         rtkPointNumber: autoRtk,
-        pinnedCodes: _activeProtocol?.speciesConfig.pinnedSpecies ?? const ['SPALT', 'SPPAT', 'BARE', 'DEAD'],
+        pinnedCodes: _activeProtocol?.speciesConfig.pinnedSpecies ?? kDefaultPinnedSpecies,
         quadratWidthM: (_activeProtocol?.quadrat ?? QuadratConfig.sopDefault).widthM,
         quadratLengthM: (_activeProtocol?.quadrat ?? QuadratConfig.sopDefault).lengthM,
       );

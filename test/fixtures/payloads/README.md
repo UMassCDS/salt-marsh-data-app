@@ -16,3 +16,7 @@ At release time copy `current/` to `v<version>/` unchanged.
 ## app_species_codes.json
 
 Every species a fresh install offers, checked by `test/contracts/species_codes_test.dart` (regenerate with `UPDATE_PAYLOADS=1 flutter test test/contracts`). The backend checks that its species table has every one of these codes, so add a species on the server before the app offers it.
+
+## sop_species.json
+
+The common name for every species in the SOP's species table (SOP page 26), checked against a fresh install by `test/contracts/sop_species_names_test.dart`. The backend checks that its migration leaves the database with the same names. Species added beyond the SOP are not listed here and are left alone.
