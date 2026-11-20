@@ -224,6 +224,9 @@ class _OutingDetailsScreenState extends ConsumerState<OutingDetailsScreen> {
                     (entry) => RecordCard(
                       index: entry.key + 1,
                       record: entry.value,
+                      sessionUploaded: !isDraft && session.syncStatus == 'synced',
+                      onRetry: isDraft ? null : _resyncOuting,
+                      retrying: _resyncing,
                     ),
                   ),
           ],
